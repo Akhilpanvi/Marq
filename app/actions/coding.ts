@@ -17,7 +17,7 @@ async function syncNow(student: unknown) {
 export async function saveHandles(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const me = await requireStudent()
-    const handles = Object.fromEntries(PLATFORM_KEYS.map(p => {
+    const handles = Object.fromEntries([...PLATFORM_KEYS, 'github' as const].map(p => {
       const v = str(fd, p, 40)
       if (v && !HANDLE.test(v)) throw new Invalid(`That ${p} username has characters usernames can't contain.`)
       return [p, v || undefined]

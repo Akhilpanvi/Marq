@@ -348,11 +348,13 @@ try {
     await s1.fill('input[name=codeforces]', 'bad handle!')
     await s1.getByRole('button', { name: 'Save & sync' }).click()
     await errorShown(s1, "characters usernames can't contain")
-    await s1.fill('input[name=codeforces]', 'tourist') // live public API
+    await s1.fill('input[name=codeforces]', 'tourist') // live public APIs
+    await s1.fill('input[name=github]', 'torvalds')
     await s1.getByRole('button', { name: 'Save & sync' }).click()
     await toast(s1, 'Coding profiles saved and synced')
     await s1.reload()
     await s1.getByText('Current rating').first().waitFor()
+    await s1.getByText('Public repos').waitFor()
     assert.doesNotMatch(await s1.locator('main').innerText(), /Coding points\s*0\b/)
     await s1.goto('/me/leaderboard')
     await s1.getByText('(you)').first().waitFor()

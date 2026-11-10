@@ -148,6 +148,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
                 </div>) : null })}
             </div>
           ) : <Empty>The student hasn&apos;t linked coding profiles yet.</Empty>}
+          {(() => { const g = coding.find(x => x.platform === 'github'); return g ? <p className="mt-3 text-sm text-muted">GitHub <a href={`https://github.com/${g.handle}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{g.handle}</a>{g.status === 'ok' ? ` · ${g.github?.repos ?? 0} repos · ★ ${g.github?.stars ?? 0}${g.github?.contributions != null ? ` · ${g.github.contributions} contributions this year` : ''}` : g.status === 'not_found' ? ' · username not found' : ''}</p> : null })()}
         </Card>
 
         <Card title="Mentor evaluations" icon={MessagesSquare}>

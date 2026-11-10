@@ -70,7 +70,7 @@ const studentSchema = new Schema(
     mentor: { type: ObjectId, ref: 'User', index: true },
     status: { type: String, enum: ['active', 'on_hold', 'withdrawn', 'completed'], default: 'active', index: true },
     // student-maintained
-    handles: { leetcode: String, codechef: String, codeforces: String },
+    handles: { leetcode: String, codechef: String, codeforces: String, github: String },
     professional: { headline: String, linkedin: String, github: String, portfolio: String, resume: String, skills: [String] },
     onLeaderboard: { type: Boolean, default: true },
   },
@@ -180,7 +180,7 @@ export const Evaluation = model('Evaluation', evaluationSchema)
 const codingStatSchema = new Schema(
   {
     student: { type: ObjectId, ref: 'Student', required: true },
-    platform: { type: String, enum: ['leetcode', 'codechef', 'codeforces'], required: true },
+    platform: { type: String, enum: ['leetcode', 'codechef', 'codeforces', 'github'], required: true },
     handle: String,
     status: { type: String, enum: ['ok', 'not_found', 'error'], default: 'ok' },
     error: String,
@@ -193,6 +193,8 @@ const codingStatSchema = new Schema(
     medium: Number,
     hard: Number,
     history: [{ _id: false, name: String, rating: Number, at: Date }],
+    // GitHub only (shown, not scored)
+    github: { repos: Number, stars: Number, followers: Number, contributions: Number, languages: [{ _id: false, name: String, n: Number }], top: [{ _id: false, name: String, url: String, stars: Number, language: String }] },
     points: { type: Number, default: 0 },
     fetchedAt: Date,
   },

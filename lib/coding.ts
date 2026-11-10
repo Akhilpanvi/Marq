@@ -53,6 +53,47 @@ const FETCH: Record<PlatformKey, (handle: string) => Promise<Stat | null>> = {
   },
 }
 
+type GH = { repos: number; stars: number; followers: number; contributions?: number; languages: { name: string; n: number }[]; top: { name: string; url: string; stars: number; language?: string }[] }
+type Repo = { name: string; url: string; stars: number; language?: string }
+
+/** GitHub: GraphQL with GITHUB_TOKEN (5,000 req/h, includes contributions); public REST fallback (60 req/h per IP). */
+async function fetchGithub(login: string): Promise<GH | null> {
+  const token = process.env.GITHUB_TOKEN
+  let repos: Repo[], total: number, followers: number, contributions: number | undefined
+  if (token) {
+    const query = `query($l:String!){user(login:$l){followers{totalCount}
+      repositories(ownerAffiliations:OWNER,privacy:PUBLIC,isFork:false,first:100,orderBy:{field:STARGAZERS,direction:DESC}){totalCount nodes{name url stargazerCount primaryLanguage{name}}}
+      contributionsCollection{contributionCalendar{totalContributions}}}}`
+    const res = await get('https://api.github.com/graphql', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { l: login } }) })
+    if (res.status === 401) throw new Error('GITHUB_TOKEN was rejected')
+    const { data } = await res.json()
+    const u = data?.user
+    if (!u) return null
+    repos = u.repositories.nodes.map((r: { name: string; url: string; stargazerCount: number; primaryLanguage?: { name: string } }) => ({ name: r.name, url: r.url, stars: r.stargazerCount, language: r.primaryLanguage?.name }))
+    total = u.repositories.totalCount
+    followers = u.followers.totalCount
+    contributions = u.contributionsCollection.contributionCalendar.totalContributions
+  } else {
+    const headers = { Accept: 'application/vnd.github+json' }
+    const res = await get(`https://api.github.com/users/${encodeURIComponent(login)}`, { headers })
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error(res.status === 403 ? 'GitHub rate limit reached (set GITHUB_TOKEN)' : `GitHub responded ${res.status}`)
+    const u = await res.json()
+    const list = await get(`https://api.github.com/users/${encodeURIComponent(login)}/repos?per_page=100&type=owner`, { headers }).then(r => (r.ok ? r.json() : []))
+    repos = list.filter((r: { fork: boolean }) => !r.fork).map((r: { name: string; html_url: string; stargazers_count: number; language?: string }) => ({ name: r.name, url: r.html_url, stars: r.stargazers_count, language: r.language ?? undefined }))
+    total = repos.length // non-fork, like the GraphQL path
+    followers = u.followers
+  }
+  const langs: Record<string, number> = {}
+  for (const r of repos) if (r.language) langs[r.language] = (langs[r.language] ?? 0) + 1
+  return {
+    repos: total, followers, contributions,
+    stars: repos.reduce((t, r) => t + r.stars, 0),
+    languages: Object.entries(langs).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, n]) => ({ name, n })),
+    top: [...repos].sort((a, b) => b.stars - a.stars).slice(0, 5),
+  }
+}
+
 export const HANDLE = /^[A-Za-z0-9_.-]{1,40}$/
 
 /** Fetches every linked platform for one student and stores the result. Never throws for a platform failure. */
@@ -70,13 +111,22 @@ export async function syncStudent(id: Types.ObjectId | string) {
       // keep the last good numbers; only mark the error
       await CodingStat.updateOne({ student: s._id, platform: p }, { $set: { handle, status: 'error', error: String((e as Error).message).slice(0, 200) } }, { upsert: true })
     }
-  }))
+  }).concat((async () => {
+    const handle = s.handles?.github
+    if (!handle) return void (await CodingStat.deleteOne({ student: s._id, platform: 'github' }))
+    try {
+      const g = await fetchGithub(handle)
+      await CodingStat.updateOne({ student: s._id, platform: 'github' }, { $set: { handle, fetchedAt: new Date(), points: 0, error: null, ...(g ? { status: 'ok', github: g } : { status: 'not_found' }) } }, { upsert: true })
+    } catch (e) {
+      await CodingStat.updateOne({ student: s._id, platform: 'github' }, { $set: { handle, status: 'error', error: String((e as Error).message).slice(0, 200) } }, { upsert: true })
+    }
+  })()))
 }
 
 /** Syncs the stalest students first within a time budget (serverless-friendly). */
 export async function syncStale(budgetMs = 45_000, concurrency = 4) {
   const start = Date.now()
-  const linked = await Student.find({ status: { $ne: 'withdrawn' }, $or: PLATFORM_KEYS.map(p => ({ [`handles.${p}`]: { $nin: [null, ''] } })) }).select('_id').lean()
+  const linked = await Student.find({ status: { $ne: 'withdrawn' }, $or: [...PLATFORM_KEYS, 'github'].map(p => ({ [`handles.${p}`]: { $nin: [null, ''] } })) }).select('_id').lean()
   const last = new Map((await CodingStat.aggregate<{ _id: Types.ObjectId; at: Date }>([{ $group: { _id: '$student', at: { $min: '$fetchedAt' } } }])).map(r => [String(r._id), +r.at || 0]))
   const queue = linked.map(s => s._id).sort((a, b) => (last.get(String(a)) ?? 0) - (last.get(String(b)) ?? 0))
   let done = 0

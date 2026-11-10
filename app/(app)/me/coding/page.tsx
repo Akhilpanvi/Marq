@@ -27,12 +27,13 @@ export default async function MyCoding() {
   const batchRank = batchRows.find(r => String(r._id) === String(s._id))?.rank
   const points = stats.reduce((t, x) => t + (x.points ?? 0), 0)
   const by = Object.fromEntries(stats.map(x => [x.platform, x]))
-  const linked = PLATFORM_KEYS.some(p => s.handles?.[p])
+  const linked = PLATFORM_KEYS.some(p => s.handles?.[p]) || !!s.handles?.github
+  const gh = stats.find(x => x.platform === 'github')
   const synced = stats.map(x => x.fetchedAt).filter(Boolean).sort((a, b) => +a! - +b!)[0]
 
   return (
     <>
-      <PageHeader title="Coding Profiles" description="Your LeetCode, CodeChef and Codeforces activity, combined into coding points and a cohort rank. Refreshed daily.">
+      <PageHeader title="Coding Profiles" description="Your LeetCode, CodeChef and Codeforces activity, combined into coding points and a cohort rank, plus your GitHub. Refreshed daily.">
         {linked && <ActionForm action={syncMine} className="inline" reset={false}><button className="btn-outline"><RefreshCw className="size-4" />Sync now</button></ActionForm>}
       </PageHeader>
 
@@ -77,10 +78,33 @@ export default async function MyCoding() {
         })}
       </div>
 
+      <Card title="GitHub" className="mt-6" action={gh?.handle ? <a href={`https://github.com/${gh.handle}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-accent hover:underline">{gh.handle}<ExternalLink className="size-3" /></a> : undefined}>
+        {!gh ? <Empty>Add your GitHub username below to show your repositories and contributions. GitHub is shown here, not scored.</Empty>
+          : gh.status === 'not_found' ? <Empty>No GitHub account named “{gh.handle}”.</Empty>
+          : gh.status === 'error' && !gh.github?.repos ? <Empty>Couldn&apos;t reach GitHub ({gh.error}). It will retry automatically.</Empty> : (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              {([['Public repos', gh.github?.repos], ['Stars', gh.github?.stars], ['Followers', gh.github?.followers], ['Contributions (1 yr)', gh.github?.contributions]] as [string, number | null | undefined][]).map(([k, v]) => (
+                <div key={k} className="rounded-lg border border-line p-2.5"><dt className="text-xs text-muted">{k}</dt><dd className="mt-0.5 font-semibold tabular-nums">{fmt(v)}</dd></div>
+              ))}
+            </dl>
+            <div>
+              <div className="mb-2 text-xs font-medium text-muted">Top languages</div>
+              <div className="flex flex-wrap gap-1.5">{gh.github?.languages.map(l => <Badge key={l.name}>{l.name} · {l.n}</Badge>)}{!gh.github?.languages.length && <span className="text-sm text-muted">—</span>}</div>
+            </div>
+            <div>
+              <div className="mb-2 text-xs font-medium text-muted">Top repositories</div>
+              <ul className="space-y-1 text-sm">{gh.github?.top.map(r => <li key={r.url} className="flex justify-between gap-2"><a href={r.url ?? '#'} target="_blank" rel="noopener noreferrer" className="truncate text-accent hover:underline">{r.name}</a><span className="shrink-0 text-xs text-muted">★ {r.stars}{r.language ? ` · ${r.language}` : ''}</span></li>)}</ul>
+            </div>
+          </div>
+        )}
+      </Card>
+
       <Card title="Usernames" className="mt-6">
         <ActionForm action={saveHandles} submit="Save & sync" reset={false}>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PLATFORM_KEYS.map(p => <Field key={p} label={PLATFORMS[p].label}><input name={p} defaultValue={s.handles?.[p] ?? ''} maxLength={40} autoComplete="off" className="input" placeholder="username" /></Field>)}
+            <Field label="GitHub"><input name="github" defaultValue={s.handles?.github ?? ''} maxLength={40} autoComplete="off" className="input" placeholder="username" /></Field>
           </div>
           <p className="text-xs text-muted">Only public profile data is read. Ranks are recorded once a day ({istDay()} so far).</p>
         </ActionForm>
