@@ -1,0 +1,65 @@
+# MARQ — Development progress
+
+_Last updated: 11 Nov 2026_
+
+## Status by module
+
+"Tested" means the workflow was driven end-to-end through the UI by `scripts/e2e.ts` (production build, every role), unless noted.
+
+| # | Module | Status | Verified by |
+|---|---|---|---|
+| 1 | Authentication (sign-in, lockout, IP rate limit, sessions, revocation) | Done | e2e: login per role, lockout, deactivation revokes session |
+| 2 | Account activation & password reset (one-time links, SMTP optional) | Done | e2e: every account activated via link; email path not exercised (no SMTP in test) |
+| 3 | User management (create, edit, deactivate/reactivate, invite/reset links, last login, creation history) | Done | e2e: 8 staff accounts, escalation blocked, deactivate |
+| 4 | Roles & permissions (10 built-in roles, custom roles, permission matrix, scopes) | Done | e2e: custom role created, built-in role saved |
+| 5 | Student management (CRUD, photo, filters, bulk batch/mentor/status) | Done | e2e: roster, filters; photo upload manual only |
+| 6 | Bulk import (template, xlsx/csv, row validation, duplicates, preview, confirm, summary, failed-records download, update mode) | Done | e2e: 7-row file incl. duplicate/missing/invalid, re-import updates |
+| 7 | Bulk account creation + activation tracking | Done | e2e: 4 accounts, links CSV has no passwords |
+| 8 | Training (programmes, batches, trainer allocation, sessions, topics, materials, completion, session feedback) | Done | e2e: programme/batches/session; feedback form covered by build + manual |
+| 9 | Attendance (P/A/L/E, student/batch/session/monthly views, corrections with reason + history) | Done | e2e: mark, correction refused without reason, history shown |
+| 10 | Assessment Centre (10 categories, create/schedule, marks entry, AB, Excel import, rankings, batch comparison, history) | Done | e2e: two assessments, marks, out-of-range rejected; Excel import of marks not in e2e |
+| 11 | Performance intelligence (configurable formula, dimensions, readiness, trends, flags, distribution, cohort comparison, formula explainer) | Done | unit checks + e2e asserts computed score 83 |
+| 12 | Student 360° profile (all 15 sections + journey timeline) | Done | e2e page render; visual review |
+| 13 | Mentorship (allocation, evaluations, strengths/weaknesses, recommendations, follow-ups, mentor-wise progress) | Done | e2e: mentor scope + evaluation |
+| 14 | Companies & job opportunities (publish → notify students, filters) | Done | e2e |
+| 15 | Job application tracker (MARQ + self-added, 14 statuses + custom, append-only timeline, duplicate prevention, dashboards) | Done | e2e: apply, duplicate blocked, status history |
+| 16 | Interviews (multiple rounds, mode/link, result/feedback, upcoming, daily reminder cron) | Done | cron auth in e2e; scheduling via UI manual |
+| 17 | Reports (10 reports, CSV/Excel, branded printable view, permission + scope aware) | Done | e2e: xlsx/csv/print |
+| 18 | Announcements & notifications (role/batch targeting, read/unread, history) | Done | e2e: student receives job/feedback/status notifications |
+| 19 | Dashboards (admin, director, accounts, assistant, mentor/trainer, student) | Done | e2e renders; visual review |
+| 20 | Financial records (expenses, approval with maker-checker, budget, charts) | Done | e2e |
+| 21 | Audit logs (append-only, filters, IP) | Done | e2e asserts 8 action types |
+| 22 | Settings (weights, category mapping, thresholds, extra statuses) | Done | renders; saving scoring manual |
+| 23 | Branding (MARQ logo + variants, KL assets, favicon, reports, emails, light/dark) | Done | visual review |
+| 24 | Deployment config (vercel.json, env, cron, health, docs) | Ready | **not yet deployed** — needs production MongoDB URI and DNS |
+
+## Pending / next
+
+- **Smart Interviews authenticated inspection** — blocked: no browser-automation tools were connected in the build session, so the logged-in areas could not be explored. Public-site findings are in `docs/DISCOVERY.md`. Re-run discovery with Claude in Chrome connected.
+- **Production deployment** to marq.klef.me (Atlas `marq_prod`, Vercel env vars, DNS record).
+- Opportunities from the gap analysis (coding-profile sync, programme leaderboard, certificates, interview-experience library) — not started; see `docs/DISCOVERY.md`.
+
+## Known issues / limitations
+
+- Learning materials and application documents are stored as **links** (Drive/LMS), not file uploads — no blob storage is configured. Profile photos are stored in MongoDB (≤300 KB).
+- Pages stream with a loading skeleton, so `notFound()` renders the 404 page with HTTP 200 (documented Next.js behaviour). No data is rendered; e2e asserts this.
+- Scores are computed on read; comfortable for hundreds of students. Denormalise onto `Student` if a cohort reaches ~10k (`lib/intel.ts`).
+- Confirmations use the browser's native confirm dialog.
+- Vercel Hobby allows one daily cron; reminders run at 08:00 IST for the next 24 h (dashboards also flag interviews within 24 h).
+- KL logos are PNG; drop `kl-seal.svg` / `kl-lockup.svg` into `public/brand/` when available.
+
+## Testing status
+
+- `npm test` — scoring unit checks: pass.
+- `npm run test:e2e` — 25 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
+
+## Architectural decisions
+
+1. **Same stack and patterns as KLOOP** (Next 16 App Router, server actions, scrypt, HMAC cookie, Mongoose), so the team maintains one style — but a separate repo, database and deployment.
+2. **Permissions as `module.action` strings on Role documents**, checked on the server in every page/action/route. Scope (`all` / `assigned`) handles mentors and trainers without per-row ACLs.
+3. **Student ≠ User.** Students are imported before they have accounts; a portal account links to its record (`User.student`).
+4. **Append-only histories** embedded where they belong (application status, attendance corrections, mark changes) plus a global append-only `AuditLog`.
+5. **No fabricated numbers:** missing data stays "—"; weights re-normalise over available dimensions, and coverage is shown.
+6. **One report builder** feeds Excel, CSV and the printable view, so they never diverge.
+7. **Minimal dependencies** (Ponytail): native `<dialog>`, GET-form filters, built-in CSV parser; added only Recharts (requested), exceljs (xlsx), nodemailer (optional email).

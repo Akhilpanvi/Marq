@@ -1,0 +1,8 @@
+*.md
+Brand/
+public/
+*.png
+*.svg
+graphify-out/
+.next/
+node_modules/

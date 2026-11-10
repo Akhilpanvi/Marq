@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 108" role="img" aria-label="MARQ">
+<g fill-rule="evenodd">
+<polygon fill="#B4232C" points="0,100 0,0 20,0 48,42 76,0 96,0 96,100 78,100 78,32 55,68 41,68 18,32 18,100"/>
+<path fill="#E8902A" transform="translate(106 0)" d="M0 100 L35 0 H55 L90 100 H71 L63.3 78 H26.7 L19 100 Z M32.3 62 H57.7 L45 25.7 Z"/>
+<path fill="#3B3FB6" transform="translate(206 0)" d="M0 0 H50 A30 30 0 0 1 58 59 L84 100 H63 L40 60 H18 V100 H0 Z M18 18 V42 H50 A12 12 0 0 0 50 18 Z"/>
+<path fill="#0F8A7E" transform="translate(300 0)" d="M50 0 A50 50 0 1 1 49.99 0 Z M50 18 A32 32 0 1 0 50.01 18 Z"/>
+<line transform="translate(300 0)" x1="62" y1="62" x2="102" y2="102" stroke="#B4232C" stroke-width="18"/>
+</g>
+</svg>

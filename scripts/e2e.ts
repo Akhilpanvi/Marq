@@ -1,0 +1,489 @@
+// End-to-end test of every role through the real UI, against a throwaway database.
+//   npm run test:e2e        (builds nothing; expects `next build` to have run)
+// Starts `next start` on :3200 with MONGODB_URI=…/marq_test, drops that DB first, and never touches marq_dev.
+import assert from 'node:assert/strict'
+import { spawn, execSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir, homedir } from 'node:os'
+import { join } from 'node:path'
+import mongoose from 'mongoose'
+import { chromium, type Page } from 'playwright-core'
+
+const PORT = 3200
+const BASE = `http://localhost:${PORT}`
+const DB = 'mongodb://127.0.0.1:27017/marq_test'
+const PW = 'Correct-Horse-42'
+const SA = { email: 'sa@marq.test', pw: 'Super-Admin-Pass-1' }
+const tmp = mkdtempSync(join(tmpdir(), 'marq-e2e-'))
+const env = { ...process.env, MONGODB_URI: DB, APP_URL: BASE, NODE_ENV: 'production', PORT: String(PORT), SUPERADMIN_EMAIL: SA.email, SUPERADMIN_PASSWORD: SA.pw, SMTP_HOST: '', CRON_SECRET: 'test-cron' } as NodeJS.ProcessEnv
+const chrome = process.env.CHROME ?? join(homedir(), 'Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell')
+
+let passed = 0
+async function step(name: string, fn: () => Promise<void>) {
+  process.stdout.write(`• ${name} … `)
+  await fn()
+  passed++
+  console.log('ok')
+}
+
+await mongoose.connect(DB)
+await mongoose.connection.dropDatabase()
+execSync('npx tsx scripts/seed.ts', { env, stdio: 'ignore' })
+const server = spawn('npx', ['next', 'start', '-p', String(PORT)], { env, stdio: ['ignore', 'pipe', 'pipe'] })
+let serverLog = ''
+server.stdout.on('data', d => (serverLog += d))
+server.stderr.on('data', d => (serverLog += d))
+for (let i = 0; i < 60; i++) {
+  try { if ((await fetch(`${BASE}/api/health`)).ok) break } catch {}
+  await new Promise(r => setTimeout(r, 500))
+}
+const browser = await chromium.launch({ executablePath: chrome })
+
+async function login(email: string, pw = PW) {
+  const ctx = await browser.newContext({ baseURL: BASE, acceptDownloads: true })
+  const p = await ctx.newPage()
+  await p.goto('/login')
+  await p.fill('input[name=id]', email)
+  await p.fill('input[name=password]', pw)
+  await p.click('button:has-text("Sign in")')
+  await p.waitForURL(u => !u.pathname.startsWith('/login'))
+  return p
+}
+const dialog = (p: Page) => p.locator('dialog[open]')
+async function open(p: Page, label: string | RegExp) {
+  await p.getByRole('button', { name: label }).first().click()
+  await dialog(p).waitFor()
+  return dialog(p)
+}
+const toast = (p: Page, text: string | RegExp) => p.locator('[aria-live=polite]').getByText(text).first().waitFor({ timeout: 10_000 })
+const errorShown = (p: Page, text: string | RegExp) => p.getByRole('alert').filter({ hasText: text }).first().waitFor({ timeout: 10_000 })
+
+/** Streaming pages answer 200 even for notFound(); what matters is the not-found UI and no leaked data. */
+async function blocked(p: Page, path: string, secret: string) {
+  const r = await p.goto(path)
+  const html = await p.content()
+  assert.ok(r?.status() === 404 || /Page not found/.test(html), `${path} should be not found`)
+  assert.ok(!html.includes(secret), `${path} leaked ${secret}`)
+}
+
+async function activate(link: string, pw = PW) {
+  const ctx = await browser.newContext({ baseURL: BASE })
+  const p = await ctx.newPage()
+  await p.goto(link)
+  await p.fill('input[name=next]', pw)
+  await p.fill('input[name=confirm]', pw)
+  await p.click('button:has-text("Set password")')
+  await p.waitForURL(u => u.pathname === '/overview' || u.pathname === '/me')
+  await ctx.close()
+}
+
+try {
+  const sa = await login(SA.email, SA.pw)
+  const staff: Record<string, string> = {
+    'Admin Assistant': 'aa@marq.test', 'Training Administrator': 'ta@marq.test', 'Placement Administrator': 'pa@marq.test',
+    Mentor: 'm1@marq.test', Trainer: 't1@marq.test', Director: 'dir@marq.test', 'Director Accounts': 'da@marq.test', Administrator: 'admin@marq.test',
+  }
+
+  await step('Super Admin creates one account per role and each activates via one-time link', async () => {
+    for (const [role, email] of Object.entries(staff)) {
+      await sa.goto('/users')
+      const d = await open(sa, /New account/)
+      await d.locator('input[name=name]').fill(`${role} User`)
+      await d.locator('input[name=email]').fill(email)
+      await d.locator('select[name=type]').selectOption(role === 'Mentor' ? 'mentor' : role === 'Trainer' ? 'trainer' : 'administrative')
+      await d.locator('select[name=role]').selectOption({ label: role })
+      await d.getByRole('button', { name: 'Create & invite' }).click()
+      const link = await d.locator('input[readonly]').inputValue()
+      assert.match(link, /\/activate\?token=/)
+      await activate(link)
+    }
+    await sa.goto('/users')
+    await sa.getByText('m1@marq.test').waitFor()
+  })
+
+  const ta = await login(staff['Training Administrator'])
+  await step('Training Admin creates programme and two batches (trainer on Batch A)', async () => {
+    await ta.goto('/training')
+    let d = await open(ta, 'New programme')
+    await d.locator('input[name=name]').fill('Top Notch Marquee 2026')
+    await d.getByRole('button', { name: 'Create programme' }).click()
+    await toast(ta, 'Programme saved')
+    for (const [name, trainer] of [['Batch A', true], ['Batch B', false]] as const) {
+      await ta.goto('/training')
+      d = await open(ta, 'New batch')
+      await d.locator('select[name=program]').selectOption({ label: 'Top Notch Marquee 2026' })
+      await d.locator('input[name=name]').fill(name)
+      if (trainer) await d.locator('select[name=trainers]').selectOption({ label: 'Trainer User' })
+      await d.getByRole('button', { name: 'Create batch' }).click()
+      await toast(ta, 'Batch saved')
+    }
+  })
+
+  const aa = await login(staff['Admin Assistant'])
+  const csv = join(tmp, 'students.csv')
+  writeFileSync(csv, [
+    'Registration Number,Full Name,University Email,Department,Batch,Mentor Email,Mobile Number',
+    '2300030001,Asha Rao,2300030001@kluniversity.in,CSE,Batch A,m1@marq.test,9876543210',
+    '2300030002,Bharat Kumar,2300030002@kluniversity.in,CSE,Batch A,,9876543211',
+    '2300030003,Chitra Devi,2300030003@kluniversity.in,ECE,Batch B,m1@marq.test,',
+    '2300030004,Dev Patel,2300030004@kluniversity.in,ECE,Batch B,,',
+    '2300030001,Asha Duplicate,dup@kluniversity.in,CSE,,,',
+    '2300030005,No Email,,CSE,,,',
+    '2300030006,Bad Batch,2300030006@kluniversity.in,CSE,Batch Z,,',
+  ].join('\n'))
+
+  await step('Admin Assistant imports students: preview flags duplicate, missing email and unknown batch; confirm imports 4', async () => {
+    await aa.goto('/students/import')
+    await aa.setInputFiles('input[type=file]', csv)
+    await aa.getByRole('button', { name: /Validate/ }).click()
+    await aa.getByText('Duplicate registration number in this file').waitFor()
+    await aa.getByText('University email is missing').waitFor()
+    await aa.getByText('Batch "Batch Z" does not exist').waitFor()
+    const dl = aa.waitForEvent('download')
+    await aa.getByRole('button', { name: 'Failed records' }).click()
+    const failed = readFileSync(await (await dl).path(), 'utf8')
+    assert.match(failed, /Batch ""Batch Z"" does not exist/)
+    assert.doesNotMatch(failed, /password/i)
+    await aa.getByRole('button', { name: /Confirm import \(4\)/ }).click()
+    await toast(aa, 'Import complete: 4 added, 0 updated')
+    await aa.goto('/students')
+    for (const n of ['Asha Rao', 'Bharat Kumar', 'Chitra Devi', 'Dev Patel']) await aa.getByText(n).first().waitFor()
+  })
+
+  await step('Re-import with "update existing" updates instead of duplicating', async () => {
+    await aa.goto('/students/import')
+    await aa.setInputFiles('input[type=file]', csv)
+    await aa.getByLabel(/Update existing students/).check()
+    await aa.getByRole('button', { name: /Validate/ }).click()
+    await aa.getByRole('button', { name: /Confirm import \(4\)/ }).click()
+    await toast(aa, 'Import complete: 0 added, 4 updated')
+    assert.equal(await mongoose.connection.collection('students').countDocuments(), 4)
+  })
+
+  const studentLinks = new Map<string, string>()
+  await step('Admin Assistant creates student accounts in bulk; activation links download (no passwords)', async () => {
+    await aa.goto('/students')
+    await aa.getByLabel('Select all').check()
+    await aa.getByRole('button', { name: /Create accounts/ }).click()
+    await toast(aa, /Created 4 accounts/)
+    const dl = aa.waitForEvent('download')
+    await aa.getByRole('button', { name: /Activation links/ }).click()
+    const text = readFileSync(await (await dl).path(), 'utf8')
+    assert.doesNotMatch(text, /password/i)
+    for (const line of text.split('\n').slice(1)) {
+      const [reg, , link] = line.split(',').map(c => c.replace(/^"|"\r?$/g, '').replace(/"$/, ''))
+      studentLinks.set(reg, link)
+    }
+    assert.equal(studentLinks.size, 4)
+    for (const reg of ['2300030001', '2300030002', '2300030003']) await activate(studentLinks.get(reg)!)
+  })
+
+  await step('Admin Assistant cannot escalate: assigning Super Administrator is refused', async () => {
+    await aa.goto('/users')
+    const d = await open(aa, /New account/)
+    await d.locator('input[name=name]').fill('Sneaky')
+    await d.locator('input[name=email]').fill('sneaky@marq.test')
+    assert.equal(await d.locator('select[name=role] option', { hasText: 'Super Administrator' }).count(), 1)
+    await d.locator('select[name=role]').selectOption({ label: 'Super Administrator' })
+    await d.getByRole('button', { name: 'Create & invite' }).click()
+    await errorShown(aa, /cannot assign the Super Administrator role/)
+  })
+
+  const ids = Object.fromEntries((await mongoose.connection.collection('students').find().toArray()).map(s => [s.regNo, String(s._id)]))
+
+  await step('Training Admin schedules a session and marks attendance; correction requires a reason and keeps history', async () => {
+    await ta.goto('/training')
+    const d = await open(ta, /Schedule session/)
+    await d.locator('input[name=title]').fill('Arrays & Hashing')
+    await d.locator('select[name=batch]').selectOption({ label: 'Batch A' })
+    await d.locator('input[name=date]').fill(new Date(Date.now() - 86400_000).toISOString().slice(0, 10))
+    await d.locator('input[name=topics]').fill('arrays, hashing')
+    await d.getByRole('button', { name: 'Schedule' }).click()
+    await toast(ta, 'Session saved')
+    await ta.goto('/training')
+    await ta.getByRole('link', { name: 'Arrays & Hashing' }).click()
+    await ta.getByLabel('Asha Rao present').check()
+    await ta.getByLabel('Bharat Kumar absent').check()
+    await ta.getByRole('button', { name: 'Save attendance' }).click()
+    await toast(ta, 'Saved: 2 marked')
+    await ta.getByLabel('Bharat Kumar late').check()
+    await ta.getByRole('button', { name: 'Save attendance' }).click()
+    await errorShown(ta, 'Enter a reason for the correction')
+    await ta.fill('input[name=reason]', 'Arrived after roll call, verified by trainer')
+    await ta.getByRole('button', { name: 'Save attendance' }).click()
+    await toast(ta, '1 corrected')
+    await ta.reload()
+    await ta.getByText('absent→late: Arrived after roll call').waitFor()
+  })
+
+  await step('Training Admin creates assessments and enters marks (AB = absent); ranking shown', async () => {
+    for (const [name, cat, max, batch] of [['Coding Test 1', 'Coding', '50', 'Batch A'], ['Aptitude 1', 'Aptitude', '100', '']] as const) {
+      await ta.goto('/assessments')
+      const d = await open(ta, /New assessment/)
+      await d.locator('input[name=name]').fill(name)
+      await d.locator('select[name=category]').selectOption(cat)
+      await d.locator('input[name=maxMarks]').fill(max)
+      await d.locator('input[name=date]').fill(new Date(Date.now() - 2 * 86400_000).toISOString().slice(0, 10))
+      if (batch) await d.locator('select[name=batches]').selectOption({ label: batch })
+      await d.getByRole('button', { name: 'Create' }).click()
+      await toast(ta, 'Assessment saved')
+    }
+    await ta.goto('/assessments')
+    await ta.getByRole('link', { name: 'Coding Test 1' }).click()
+    await ta.getByLabel('Marks for Asha Rao', { exact: true }).fill('40')
+    await ta.getByLabel('Marks for Bharat Kumar', { exact: true }).fill('AB')
+    await ta.getByRole('button', { name: 'Save marks' }).click()
+    await toast(ta, 'Saved 2 results')
+    await ta.getByLabel('Marks for Asha Rao', { exact: true }).fill('60')
+    await ta.getByRole('button', { name: 'Save marks' }).click()
+    await errorShown(ta, 'Marks must be between 0 and 50')
+    await ta.goto('/assessments')
+    await ta.getByRole('link', { name: 'Aptitude 1' }).click()
+    for (const [n, v] of [['Asha Rao', '70'], ['Bharat Kumar', '55'], ['Chitra Devi', '80'], ['Dev Patel', '30']]) await ta.getByLabel(`Marks for ${n}`, { exact: true }).fill(v)
+    await ta.getByRole('button', { name: 'Save marks' }).click()
+    await toast(ta, 'Saved 4 results')
+  })
+
+  await step('Scores are computed from real data only (Asha: coding 80, aptitude 70, attendance 100)', async () => {
+    await ta.goto(`/performance`)
+    const row = ta.locator('tr', { hasText: 'Asha Rao' })
+    // overall = (80*25 + 70*15 + 100*15) / 55 = 82.7 → 83
+    await row.getByText('83', { exact: true }).first().waitFor()
+    await ta.goto(`/students/${ids['2300030004']}`)
+    await ta.getByText('Technical', { exact: true }).first().waitFor() // Dev has no technical data → "—", not 0
+  })
+
+  await step('Trainer sees only their batch; other students 404 even by URL', async () => {
+    const t1 = await login(staff.Trainer)
+    await t1.goto('/students')
+    await t1.getByText('Asha Rao').waitFor()
+    assert.equal(await t1.getByText('Chitra Devi').count(), 0)
+    await blocked(t1, `/students/${ids['2300030003']}`, 'Chitra')
+    await t1.goto('/finance')
+    await t1.waitForURL('**/denied')
+    await t1.context().close()
+  })
+
+  await step('Mentor sees only mentees, adds an evaluation; non-mentee 404', async () => {
+    const m1 = await login(staff.Mentor)
+    await m1.goto('/students')
+    await m1.getByText('Asha Rao').waitFor()
+    await m1.getByText('Chitra Devi').waitFor()
+    assert.equal(await m1.getByText('Bharat Kumar').count(), 0)
+    await blocked(m1, `/students/${ids['2300030002']}`, 'Bharat')
+    await m1.goto(`/students/${ids['2300030001']}`)
+    const d = await open(m1, /Add evaluation/)
+    await d.locator('select[name=coding]').selectOption('4')
+    await d.locator('textarea[name=strengths]').fill('Strong problem decomposition')
+    await d.locator('textarea[name=recommendations]').fill('Practise graph problems weekly')
+    await d.getByRole('button', { name: 'Save evaluation' }).click()
+    await toast(m1, 'Evaluation saved')
+    await m1.reload()
+    await m1.getByText('Strong problem decomposition').first().waitFor()
+    await m1.context().close()
+  })
+
+  const pa = await login(staff['Placement Administrator'])
+  await step('Placement Admin adds a company and publishes an opportunity', async () => {
+    await pa.goto('/companies')
+    let d = await open(pa, /Add company/)
+    await d.locator('input[name=name]').fill('Acme Corp')
+    await d.locator('input[name=industry]').fill('Software')
+    await d.getByRole('button', { name: 'Add company' }).click()
+    await toast(pa, 'Company saved')
+    await pa.goto('/jobs')
+    d = await open(pa, /Publish opportunity/)
+    await d.locator('select[name=company]').selectOption({ label: 'Acme Corp' })
+    await d.locator('input[name=role]').fill('Software Engineer')
+    await d.locator('input[name=ctc]').fill('12')
+    await d.locator('input[name=deadline]').fill(new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10))
+    await d.locator('input[name=skills]').fill('Java, DSA')
+    await d.getByRole('button', { name: 'Save' }).click()
+    await toast(pa, 'Opportunity saved')
+  })
+
+  const s1 = await login('2300030001@kluniversity.in')
+  await step('Student: dashboard, notifications, apply to job, duplicate blocked', async () => {
+    await s1.goto('/me')
+    await s1.getByText('Welcome, Asha').waitFor()
+    await s1.goto('/notifications')
+    await s1.getByText('New opportunity: Acme Corp').waitFor()
+    await s1.getByText('New mentor feedback').waitFor()
+    s1.once('dialog', d => d.accept())
+    await s1.goto('/me/jobs')
+    await s1.locator('.card', { hasText: 'Software Engineer' }).getByRole('button', { name: 'Apply' }).click()
+    await toast(s1, /Applied to Acme Corp/)
+    await s1.reload()
+    await s1.getByText('Applied · Applied').waitFor()
+    await s1.goto('/me/applications')
+    const d = await open(s1, /Add application/)
+    await d.locator('input[name=company]').fill('acme corp')
+    await d.locator('input[name=role]').fill('software engineer')
+    await d.getByRole('button', { name: 'Save application' }).click()
+    await errorShown(s1, 'already exists')
+  })
+
+  await step('Student: self-added application with status history (nothing overwritten)', async () => {
+    await s1.goto('/me/applications')
+    const d = await open(s1, /Add application/)
+    await d.locator('input[name=company]').fill('Globex')
+    await d.locator('input[name=role]').fill('Data Analyst')
+    await d.locator('input[name=source]').fill('LinkedIn')
+    await d.getByRole('button', { name: 'Save application' }).click()
+    await toast(s1, 'Application saved')
+    await s1.goto('/me/applications')
+    await s1.getByRole('link', { name: /Globex/ }).click()
+    await s1.getByLabel('New status').selectOption('Written Test Scheduled')
+    await s1.getByPlaceholder('Remarks (optional)').fill('Test on Friday')
+    await s1.getByRole('button', { name: 'Update' }).click()
+    await toast(s1, 'Status updated to Written Test Scheduled')
+    await s1.reload()
+    await s1.getByText('Test on Friday').waitFor()
+    const app = await mongoose.connection.collection('applications').findOne({ company: 'Globex' })
+    assert.deepEqual(app!.history.map((h: { to: string }) => h.to), ['Applied', 'Written Test Scheduled'])
+  })
+
+  await step('Student isolation: admin pages denied, other student data 403/404 by URL and API', async () => {
+    await s1.goto('/students')
+    await s1.waitForURL('**/denied')
+    await s1.goto(`/students/${ids['2300030003']}`)
+    await s1.waitForURL('**/denied')
+    assert.doesNotMatch(await s1.content(), /Chitra/)
+    assert.equal((await s1.request.get('/api/reports/students?format=csv')).status(), 403)
+    assert.equal((await s1.goto(`/api/students/${ids['2300030003']}/photo`))?.status(), 404)
+    await s1.goto('/me/assessments')
+    await s1.getByText('Coding Test 1').waitFor()
+    const html = await s1.content()
+    assert.doesNotMatch(html, /Chitra|Bharat|Dev Patel/)
+  })
+
+  await step('Placement Admin moves the application to Offered; student is notified; timeline grows', async () => {
+    await pa.goto('/applications')
+    await pa.getByRole('link', { name: 'Acme Corp' }).click()
+    await pa.getByLabel('New status').selectOption('Offered')
+    await pa.getByRole('button', { name: 'Update' }).click()
+    await toast(pa, 'Status updated to Offered')
+    await s1.goto('/notifications')
+    await s1.getByText('Acme Corp: Offered').waitFor()
+    await pa.goto('/placement')
+    await pa.getByText('Students with offers').waitFor()
+  })
+
+  await step('Finance: Training Admin submits expense, Director Accounts approves and sets budget', async () => {
+    await ta.goto('/finance')
+    const d = await open(ta, /Add expense/)
+    await d.locator('input[name=date]').fill(new Date().toISOString().slice(0, 10))
+    await d.locator('input[name=category]').fill('Trainer fees')
+    await d.locator('input[name=amount]').fill('50000')
+    await d.locator('textarea[name=description]').fill('Week 1 DSA trainer')
+    await d.getByRole('button', { name: 'Submit for approval' }).click()
+    await toast(ta, 'pending approval')
+    const da = await login(staff['Director Accounts'])
+    await da.getByText('Accounts Overview').waitFor()
+    await da.goto('/finance')
+    await da.getByRole('button', { name: 'Approve' }).click()
+    await toast(da, 'Marked approved')
+    const b = await open(da, 'Set budget')
+    await b.locator('input[name=budget]').fill('1000000')
+    await b.getByRole('button', { name: 'Save budget' }).click()
+    await toast(da, 'Budget updated')
+    await da.goto('/students')
+    await da.waitForURL('**/denied')
+    await da.context().close()
+  })
+
+  await step('Director: executive overview, read-only, no finance or user management', async () => {
+    const dir = await login(staff.Director)
+    await dir.getByText('Executive Overview').waitFor()
+    await dir.goto('/students')
+    assert.equal(await dir.getByRole('button', { name: /Add student/ }).count(), 0)
+    for (const path of ['/finance', '/users', '/audit']) {
+      await dir.goto(path)
+      await dir.waitForURL('**/denied')
+    }
+    assert.equal((await dir.request.get('/api/reports/performance?format=xlsx')).status(), 200)
+    await dir.context().close()
+  })
+
+  await step('Exports & reports: Excel for staff, branded printable view', async () => {
+    const r = await sa.request.get('/api/reports/applications?format=xlsx')
+    assert.equal(r.status(), 200)
+    assert.match(r.headers()['content-type'], /spreadsheetml/)
+    const c = await sa.request.get('/api/reports/attendance?format=csv')
+    assert.match(await c.text(), /Asha Rao/)
+    await sa.goto('/reports/performance')
+    await sa.getByText('Confidential').waitFor()
+  })
+
+  await step('Audit log records imports, corrections, status changes and finance approvals', async () => {
+    const actions = await mongoose.connection.collection('auditlogs').distinct('action')
+    for (const a of ['student.import', 'attendance.correct', 'results.update', 'application.status', 'finance.approved', 'account.bulkCreate', 'user.create', 'report.export']) assert.ok(actions.includes(a), `missing audit ${a}`)
+    await sa.goto('/audit')
+    await sa.getByText('attendance.correct').first().waitFor()
+  })
+
+  await step('Roles: custom role with chosen permissions; deactivation revokes sessions', async () => {
+    await sa.goto('/roles?new=1')
+    await sa.fill('input[name=name]', 'Coordinator')
+    await sa.getByLabel('Students: view').check()
+    await sa.getByRole('button', { name: 'Create role' }).click()
+    await toast(sa, 'Role Coordinator created')
+    await sa.goto('/roles?edit=trainer')
+    await sa.getByLabel('Reports: export').check()
+    await sa.getByRole('button', { name: 'Save permissions' }).click()
+    await toast(sa, 'Trainer updated')
+    const victim = await login(staff.Administrator)
+    await sa.goto('/users?q=admin%40marq.test')
+    sa.once('dialog', d => d.accept())
+    await sa.getByRole('button', { name: 'Deactivate' }).click()
+    await toast(sa, /deactivated/)
+    await victim.goto('/overview')
+    await victim.waitForURL('**/login')
+  })
+
+  await step('Account lockout after 5 failed sign-ins', async () => {
+    const ctx = await browser.newContext({ baseURL: BASE })
+    const p = await ctx.newPage()
+    for (let i = 0; i < 6; i++) {
+      await p.goto('/login')
+      await p.fill('input[name=id]', staff['Placement Administrator'])
+      await p.fill('input[name=password]', i < 5 ? 'wrong-password-123' : PW)
+      await p.click('button:has-text("Sign in")')
+      await p.getByRole('alert').waitFor()
+    }
+    await p.getByText('Too many failed attempts').waitFor()
+    await ctx.close()
+  })
+
+  await step('Cron reminder endpoint requires its secret', async () => {
+    assert.equal((await fetch(`${BASE}/api/cron/reminders`)).status, 401)
+    assert.equal((await fetch(`${BASE}/api/cron/reminders`, { headers: { authorization: 'Bearer test-cron' } })).status, 200)
+  })
+
+  await step('Dark theme toggles and persists', async () => {
+    await sa.goto('/overview')
+    await sa.getByRole('button', { name: 'Toggle dark mode' }).first().click()
+    await sa.reload()
+    assert.equal(await sa.evaluate(() => document.documentElement.classList.contains('dark')), true)
+  })
+
+  await step('Every navigation page renders without server errors for Super Admin', async () => {
+    for (const path of ['/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+      const r = await sa.goto(path)
+      assert.equal(r?.status(), 200, path)
+    }
+    // aborted navigations ("stream closed early") are the test moving on, not app errors
+    assert.doesNotMatch(serverLog.replace(/⨯ Error: The destination stream closed early\.[^}]*}/g, ''), /⨯|Error:/)
+  })
+
+  console.log(`\n${passed} end-to-end checks passed.`)
+} catch (e) {
+  console.log('FAILED')
+  console.error(e)
+  console.error('--- server log (tail) ---\n' + serverLog.slice(-4000))
+  process.exitCode = 1
+} finally {
+  await browser.close()
+  server.kill()
+  await mongoose.disconnect()
+}

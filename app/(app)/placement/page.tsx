@@ -1,0 +1,82 @@
+import type { Types } from 'mongoose'
+import Link from 'next/link'
+import { requirePage, scopedStudentIds } from '@/lib/auth'
+import { appMetrics } from '@/lib/app-metrics'
+import { OFFERED, REJECTED } from '@/lib/placement'
+import { pct } from '@/lib/format'
+import { Application, Interview, Job, Student } from '@/models'
+import { Card, Grid, PageHeader, Stat, Table, Empty } from '@/components/ui'
+import { Bars, Donut } from '@/components/charts'
+import { AppMetricTiles } from '@/components/app-metrics'
+
+export const metadata = { title: 'Placement Analytics' }
+
+export default async function PlacementPage() {
+  const me = await requirePage('applications.view')
+  const ids = await scopedStudentIds(me)
+  const match: Record<string, unknown> = ids ? { student: { $in: ids } } : {}
+  const sMatch = ids ? { _id: { $in: ids } } : {}
+  const [m, students, placed, offered, byCompany, monthly, interviews, packages, topStudents] = await Promise.all([
+    appMetrics(match),
+    Student.countDocuments({ ...sMatch, status: { $ne: 'withdrawn' } }),
+    Application.distinct('student', { ...match, status: 'Accepted' }),
+    Application.distinct('student', { ...match, status: { $in: OFFERED } }),
+    Application.aggregate<{ _id: string; apps: number; offers: number; accepted: number; rejected: number; inProcess: number }>([
+      { $match: match },
+      { $group: { _id: '$company', apps: { $sum: 1 }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } }, accepted: { $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] } }, rejected: { $sum: { $cond: [{ $in: ['$status', REJECTED] }, 1, 0] } } } },
+      { $sort: { apps: -1 } }, { $limit: 30 },
+    ]),
+    Application.aggregate<{ _id: string; n: number }>([{ $match: match }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: { $ifNull: ['$appliedOn', '$createdAt'] }, timezone: 'Asia/Kolkata' } }, n: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
+    Interview.aggregate<{ _id: string; n: number }>([{ $match: { ...match, status: 'completed' } }, { $group: { _id: '$result', n: { $sum: 1 } } }]),
+    Application.aggregate<{ _id: null; max: number; avg: number; n: number }>([
+      { $match: { ...match, status: 'Accepted', job: { $ne: null } } },
+      { $lookup: { from: 'jobs', localField: 'job', foreignField: '_id', as: 'j' } }, { $unwind: '$j' }, { $match: { 'j.ctc': { $gt: 0 } } },
+      { $group: { _id: null, max: { $max: '$j.ctc' }, avg: { $avg: '$j.ctc' }, n: { $sum: 1 } } },
+    ]),
+    Application.aggregate<{ _id: unknown; apps: number; offers: number }>([
+      { $match: match }, { $group: { _id: '$student', apps: { $sum: 1 }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } } } }, { $sort: { offers: -1, apps: -1 } }, { $limit: 10 },
+    ]),
+  ])
+  const names = new Map((await Student.find({ _id: { $in: topStudents.map(t => t._id as Types.ObjectId) } }).select('name').lean()).map(s => [String(s._id), s.name]))
+  const openJobs = await Job.countDocuments({ status: 'open' })
+  const funnel = [
+    { stage: 'Applied', n: m.total },
+    { stage: 'Written test', n: m.written },
+    { stage: 'Technical', n: m.technical },
+    { stage: 'HR', n: m.hr },
+    { stage: 'Offers', n: m.offers },
+    { stage: 'Accepted', n: m.accepted },
+  ]
+  const results = interviews.map(i => ({ name: i._id, value: i.n }))
+  const pk = packages[0]
+
+  return (
+    <>
+      <PageHeader title="Placement Analytics" description="Built from recorded applications, interviews and offers." />
+      <Grid>
+        <Stat label="Students placed" value={placed.length} hint={`${pct(students ? (placed.length / students) * 100 : null)} of ${students}`} />
+        <Stat label="Students with offers" value={offered.length} />
+        <Stat label="Highest package (accepted)" value={pk ? `${pk.max} LPA` : '—'} hint={pk ? `Average ${pk.avg.toFixed(1)} LPA across ${pk.n}` : 'Needs accepted offers on published jobs'} />
+        <Stat label="Open opportunities" value={openJobs} />
+      </Grid>
+      <div className="my-6"><AppMetricTiles m={m} /></div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Stage counts (current status)" className="lg:col-span-2"><Bars data={funnel} x="stage" series={[{ key: 'n', label: 'Applications' }]} height={240} /></Card>
+        <Card title="Interview outcomes"><Donut data={results} /></Card>
+      </div>
+      <Card title="Applications per month" className="my-6"><Bars data={monthly.map(x => ({ month: x._id, n: x.n }))} x="month" series={[{ key: 'n', label: 'Applications' }]} height={220} /></Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Company-wise recruitment" className="lg:col-span-2" pad={false}>
+          <Table head={['Company', 'Applications', 'Offers', 'Accepted', 'Rejected']} empty={<Empty>No applications yet.</Empty>}>
+            {byCompany.map(c => <tr key={c._id}><td className="td font-medium">{c._id}</td><td className="td tabular-nums">{c.apps}</td><td className="td tabular-nums">{c.offers}</td><td className="td tabular-nums">{c.accepted}</td><td className="td tabular-nums">{c.rejected}</td></tr>)}
+          </Table>
+        </Card>
+        <Card title="Student-wise" pad={false}>
+          <Table head={['Student', 'Apps', 'Offers']} empty={<Empty>No applications yet.</Empty>}>
+            {topStudents.map(t => <tr key={String(t._id)}><td className="td"><Link href={`/students/${t._id}`} className="hover:underline">{names.get(String(t._id))}</Link></td><td className="td tabular-nums">{t.apps}</td><td className="td tabular-nums">{t.offers}</td></tr>)}
+          </Table>
+        </Card>
+      </div>
+    </>
+  )
+}

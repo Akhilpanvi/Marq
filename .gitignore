@@ -1,0 +1,11 @@
+node_modules
+.next
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+graphify-out/cache
+.vercel
+graphify-out/manifest.json
+graphify-out/.graphify_*

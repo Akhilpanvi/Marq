@@ -1,0 +1,103 @@
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  Banknote, BarChart3, Bell, BookOpen, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
+  GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users, Video,
+} from 'lucide-react'
+import { hasPerm, type Perm } from '@/lib/rbac'
+
+type Item = { href: string; label: string; icon: typeof Users; perm?: Perm; mine?: string }
+const ADMIN: { group: string; items: Item[] }[] = [
+  { group: '', items: [{ href: '/overview', label: 'Overview', icon: LayoutDashboard }] },
+  {
+    group: 'People',
+    items: [
+      { href: '/students', label: 'Students', mine: 'My Students', icon: GraduationCap, perm: 'students.view' },
+      { href: '/users', label: 'User Management', icon: UserCog, perm: 'users.view' },
+      { href: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, perm: 'roles.view' },
+      { href: '/mentors', label: 'Mentors', mine: 'Student Evaluations', icon: MessagesSquare, perm: 'mentorship.view' },
+    ],
+  },
+  {
+    group: 'Training',
+    items: [
+      { href: '/training', label: 'Training', mine: 'Training Progress', icon: BookOpen, perm: 'training.view' },
+      { href: '/attendance', label: 'Attendance', icon: CalendarCheck, perm: 'attendance.view' },
+      { href: '/assessments', label: 'Assessments', icon: ClipboardCheck, perm: 'assessments.view' },
+      { href: '/performance', label: 'Performance Intelligence', icon: Gauge, perm: 'performance.view' },
+    ],
+  },
+  {
+    group: 'Placements',
+    items: [
+      { href: '/companies', label: 'Companies', icon: Building2, perm: 'companies.view' },
+      { href: '/jobs', label: 'Job Opportunities', icon: Briefcase, perm: 'jobs.view' },
+      { href: '/applications', label: 'Applications', icon: ClipboardList, perm: 'applications.view' },
+      { href: '/interviews', label: 'Interviews', icon: Video, perm: 'interviews.view' },
+      { href: '/placement', label: 'Placement Analytics', icon: Trophy, perm: 'applications.view' },
+    ],
+  },
+  {
+    group: 'Administration',
+    items: [
+      { href: '/reports', label: 'Reports', icon: BarChart3, perm: 'reports.view' },
+      { href: '/announcements', label: 'Announcements', icon: Megaphone, perm: 'announcements.view' },
+      { href: '/finance', label: 'Financial Records', icon: Banknote, perm: 'finance.view' },
+      { href: '/audit', label: 'Audit Logs', icon: ScrollText, perm: 'audit.view' },
+      { href: '/settings', label: 'Settings', icon: Settings, perm: 'settings.view' },
+    ],
+  },
+]
+const STUDENT: Item[] = [
+  { href: '/me', label: 'My Dashboard', icon: LayoutDashboard },
+  { href: '/me/profile', label: 'My Profile', icon: UserRound },
+  { href: '/me/training', label: 'My Training', icon: BookOpen },
+  { href: '/me/attendance', label: 'My Attendance', icon: CalendarCheck },
+  { href: '/me/assessments', label: 'My Assessments', icon: ClipboardCheck },
+  { href: '/me/performance', label: 'My Performance', icon: Gauge },
+  { href: '/me/jobs', label: 'Job Opportunities', icon: Briefcase },
+  { href: '/me/applications', label: 'My Applications', icon: ClipboardList },
+  { href: '/me/interviews', label: 'My Interviews', icon: Video },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
+]
+
+function NavLink({ item, label, path }: { item: Item; label: string; path: string }) {
+  const active = item.href === '/me' ? path === '/me' : path === item.href || path.startsWith(item.href + '/')
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      aria-current={active ? 'page' : undefined}
+      className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${active ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-subtle hover:text-fg'}`}
+    >
+      <Icon className="size-4" />
+      {label}
+    </Link>
+  )
+}
+
+export function Nav({ perms, student, assigned, unread }: { perms: string[]; student: boolean; assigned: boolean; unread: number }) {
+  const path = usePathname()
+  if (student)
+    return (
+      <nav className="flex gap-1 overflow-x-auto lg:flex-col">
+        {STUDENT.map(i => <NavLink key={i.href} item={i} path={path} label={i.href === '/notifications' && unread ? `${i.label} (${unread})` : i.label} />)}
+      </nav>
+    )
+  return (
+    <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-4">
+      {ADMIN.map(g => {
+        const items = g.items.filter(i => !i.perm || hasPerm(perms, i.perm))
+        if (!items.length) return null
+        return (
+          <div key={g.group} className="flex gap-1 lg:flex-col lg:gap-0.5">
+            {g.group && <div className="hidden px-3 pb-1 text-[11px] font-semibold tracking-wider text-muted/80 uppercase lg:block">{g.group}</div>}
+            {items.map(i => <NavLink key={i.href} item={i} path={path} label={assigned && i.mine ? i.mine : i.label} />)}
+          </div>
+        )
+      })}
+    </nav>
+  )
+}

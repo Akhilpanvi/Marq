@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* KL crimson, sampled from the seal (Brand/README) */
+  --color-brand-50: #fbf3f3;
+  --color-brand-100: #f7e4e5;
+  --color-brand-200: #efc6c8;
+  --color-brand-300: #e19ca0;
+  --color-brand-400: #cf6068;
+  --color-brand-500: #bb3139;
+  --color-brand-600: #a41c24;
+  --color-brand-700: #8a1820;
+  --color-brand-800: #6f151b;
+  --color-brand-900: #5c1519;
+  /* semantic surfaces: swapped wholesale in .dark */
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-subtle: #f4f4f5;
+  --color-line: #e4e4e7;
+  --color-fg: #18181b;
+  --color-muted: #71717a;
+  --color-accent: #a41c24;
+  --color-accent-soft: #fbf3f3;
+  /* chart series, validated for light and dark */
+  --color-c1: #3b3fb6;
+  --color-c2: #b4232c;
+  --color-c3: #009a85;
+  --color-c4: #c97516;
+  --color-c5: #a1a1aa; /* "Other"/neutral only, never a series */
+}
+
+:root {
+  color-scheme: light;
+  --marq-m: #b4232c; --marq-a: #e8902a; --marq-r: #3b3fb6; --marq-q: #0f8a7e;
+}
+.dark {
+  color-scheme: dark;
+  --marq-m: #f0646c; --marq-a: #f5b054; --marq-r: #8c90ff; --marq-q: #3cc9b5;
+  --color-bg: #0b0d12;
+  --color-surface: #12151c;
+  --color-subtle: #1a1e27;
+  --color-line: #262b36;
+  --color-fg: #ececf1;
+  --color-muted: #9097a6;
+  --color-accent: #f0646c;
+  --color-accent-soft: #2a1416;
+  /* validated with dataviz validate_palette.js (light + dark) */
+  --color-c1: #7b7ff0;
+  --color-c2: #e0525b;
+  --color-c3: #14a28e;
+  --color-c4: #c27e22;
+  --color-c5: #52525b;
+}
+
+body { @apply bg-bg text-fg antialiased; }
+
+@utility card { @apply rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.04)]; }
+@utility input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg shadow-xs outline-none transition placeholder:text-muted focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 disabled:opacity-60; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition disabled:opacity-60 cursor-pointer disabled:cursor-default; }
+@utility btn-primary { @apply btn bg-brand-600 text-white shadow-xs hover:bg-brand-700; }
+@utility btn-outline { @apply btn border border-line bg-surface text-fg shadow-xs hover:bg-subtle; }
+@utility btn-ghost { @apply btn text-muted hover:bg-subtle hover:text-fg; }
+@utility btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+@utility label { @apply mb-1.5 block text-sm font-medium text-fg; }
+@utility th { @apply px-3 py-2.5 text-left text-xs font-medium tracking-wide text-muted uppercase; }
+@utility td { @apply px-3 py-2.5 align-middle; }
+
+select.input { @apply pr-8; }
+dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+
+@media print {
+  aside, nav, .no-print { display: none !important; }
+  body { background: white; }
+  main { max-width: none !important; padding: 0 !important; }
+  .card { box-shadow: none; break-inside: avoid; }
+}
