@@ -1,5 +1,6 @@
 // Idempotent bootstrap: system roles + first Super Administrator. Never creates students or sample data.
 // npm run seed
+import { createHash, randomBytes } from 'node:crypto'
 import mongoose from 'mongoose'
 import { db } from '../lib/db'
 import { hashPassword, passwordIssue } from '../lib/password'
@@ -23,14 +24,19 @@ async function main() {
   const email = process.env.SUPERADMIN_EMAIL?.toLowerCase()
   const password = process.env.SUPERADMIN_PASSWORD ?? ''
   if (email) {
-    const issue = passwordIssue(password)
-    if (issue) throw new Error(`SUPERADMIN_PASSWORD: ${issue}`)
     const role = await Role.findOne({ key: 'superadmin' })
     const existing = await User.findOne({ email })
     if (existing) console.log(`Super Administrator ${email} already exists — left unchanged.`)
-    else {
+    else if (password) {
+      const issue = passwordIssue(password)
+      if (issue) throw new Error(`SUPERADMIN_PASSWORD: ${issue}`)
       await User.create({ name: 'Super Administrator', email, role: role!._id, type: 'administrative', status: 'active', passwordHash: await hashPassword(password), activatedAt: new Date() })
       console.log(`Created Super Administrator ${email}.`)
+    } else {
+      // no password supplied: invite instead, so no production password is ever typed or stored
+      const token = randomBytes(32).toString('base64url')
+      await User.create({ name: process.env.SUPERADMIN_NAME || 'Super Administrator', email, role: role!._id, type: 'administrative', status: 'invited', tokenHash: createHash('sha256').update(token).digest('hex'), tokenPurpose: 'activate', tokenExpires: new Date(Date.now() + 7 * 86400_000), invitedAt: new Date() })
+      console.log(`Invited Super Administrator ${email}. One-time activation link (valid 7 days):\n${(process.env.APP_URL ?? 'https://marq.klef.me').replace(/\/$/, '')}/activate?token=${token}`)
     }
   }
   await Promise.all(Object.values(mongoose.models).map(m => m.syncIndexes()))
