@@ -31,7 +31,8 @@ _Last updated: 11 Nov 2026_
 | 21 | Audit logs (append-only, filters, IP) | Done | e2e asserts 8 action types |
 | 22 | Settings (weights, category mapping, thresholds, extra statuses) | Done | renders; saving scoring manual |
 | 23 | Branding (MARQ logo + variants, KL assets, favicon, reports, emails, light/dark) | Done | visual review |
-| 24 | Deployment config (vercel.json, env, cron, health, docs) | Ready | **not yet deployed** — needs production MongoDB URI and DNS |
+| 23b | Coding profiles, leaderboards, contest leaderboard, targets, coding report (from the Smart Interviews walkthrough) | Done | e2e: live Codeforces sync, both leaderboards, visibility toggle, target flags in report |
+| 24 | Deployment config (vercel.json, env, cron, health, docs) | Done | live at https://marq.klef.me; GitHub → Vercel auto-deploy |
 
 ## Pending / next
 
@@ -51,7 +52,7 @@ _Last updated: 11 Nov 2026_
 ## Testing status
 
 - `npm test` — scoring unit checks: pass.
-- `npm run test:e2e` — 25 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npm run test:e2e` — 28 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
 - `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Architectural decisions

@@ -4,7 +4,8 @@ import { can, scopedStudentIds, type Me } from './auth'
 import { profiles } from './intel'
 import { attendancePct, DIMENSIONS, type Dim } from './scoring'
 import { placementStatus, OFFERED, REJECTED } from './placement'
-import { Application, Assessment, AssessmentResult, Attendance, Batch, Evaluation, FinancialRecord, Interview, Student, User } from '@/models'
+import { Application, Assessment, AssessmentResult, Attendance, Batch, CodingStat, Evaluation, FinancialRecord, Interview, Student, Target, User } from '@/models'
+import { PLATFORMS, PLATFORM_KEYS, platformPoints, targetFlag } from './coding-points'
 import type { Perm } from './rbac'
 
 export type Report = { title: string; columns: string[]; rows: (string | number | null)[][] }
@@ -72,6 +73,31 @@ export const REPORTS: Record<string, Def> = {
         title: 'Assessment results', columns: ['Assessment', 'Category', 'Date', 'Registration No', 'Name', 'Marks', 'Max', 'Percent', 'Remarks'],
         rows: results.filter(r => as.has(String(r.assessment))).map(r => { const a = as.get(String(r.assessment))!, s = sInfo.get(String(r.student)); return [a.name, a.category, d(a.date), s?.regNo ?? '', s?.name ?? '', r.marks ?? 'AB', a.maxMarks, r.marks == null ? null : r1((r.marks / a.maxMarks) * 100), r.remarks ?? ''] })
           .sort((x, y) => String(x[2]).localeCompare(String(y[2]))),
+      }
+    },
+  },
+  coding: {
+    title: 'Coding platforms', description: 'Coding points per platform, ratings, attendance and target status, ranked.', perm: 'students.view',
+    build: async (me, p) => {
+      const { students, ids, bName } = await scopedStudents(me, p)
+      const [stats, att, targets] = await Promise.all([
+        CodingStat.find({ student: { $in: ids } }).lean(),
+        Attendance.aggregate<{ _id: Types.ObjectId; att: number; n: number }>([{ $match: { student: { $in: ids }, status: { $ne: 'excused' } } }, { $group: { _id: '$student', att: { $sum: { $cond: [{ $in: ['$status', ['present', 'late']] }, 1, 0] } }, n: { $sum: 1 } } }]),
+        Target.find({ due: { $lte: new Date() } }).sort({ due: -1 }).lean(),
+      ])
+      const by = new Map<string, typeof stats>()
+      stats.forEach(c => by.set(String(c.student), [...(by.get(String(c.student)) ?? []), c]))
+      const a = new Map(att.map(x => [String(x._id), x.n ? (x.att / x.n) * 100 : null]))
+      const rows = students.map(s => {
+        const cs = by.get(String(s._id)) ?? []
+        const total = cs.reduce((t, c) => t + (c.points ?? 0), 0)
+        const target = targets.find(t => String(t.batch) === String(s.batch))
+        return { s, cs, total, target, flag: targetFlag(total, target?.points) }
+      }).sort((x, y) => y.total - x.total)
+      const cols = PLATFORM_KEYS.flatMap(k => [`${PLATFORMS[k].label} rating`, `${PLATFORMS[k].label} points`])
+      return {
+        title: 'Coding platforms', columns: ['Rank', 'Registration No', 'Name', 'Batch', 'Attendance %', ...cols, 'Total points', 'Target', 'Target status'],
+        rows: rows.map((r, i) => [i + 1, r.s.regNo, r.s.name, bName.get(String(r.s.batch)) ?? '', r1(a.get(String(r.s._id))), ...PLATFORM_KEYS.flatMap(k => { const c = r.cs.find(x => x.platform === k); return [c?.rating ?? null, c ? platformPoints(k, c) : null] }), r.total, r.target ? `${r.target.name} (${r.target.points})` : '', r.flag === 'met' ? 'Met' : r.flag === 'behind' ? 'Work harder' : r.flag === 'far' ? 'Improve immediately' : '']),
       }
     },
   },

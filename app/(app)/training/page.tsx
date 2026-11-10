@@ -4,11 +4,14 @@ import { can, requirePage } from '@/lib/auth'
 import { visibleBatches } from '@/lib/scope'
 import { batchOptions, programOptions, trainerOptions } from '@/lib/options'
 import { day, pct } from '@/lib/format'
-import { Attendance, Batch, Program, Student, TrainingSession, User } from '@/models'
+import { Attendance, Batch, Program, Student, Target, TrainingSession, User } from '@/models'
 import { Badge, Card, Field, Meter, PageHeader, Table } from '@/components/ui'
 import { Filters, Pager, PAGE_SIZE, pageOf, Select, sp } from '@/components/list'
 import { ActionForm, Modal } from '@/components/form'
 import { saveBatch, saveProgram, saveSession } from '@/app/actions/training'
+import { deleteTarget, saveTarget } from '@/app/actions/coding'
+import { ActionButton } from '@/components/form'
+import { fmt } from '@/lib/format'
 import { SessionFields } from '@/components/session-fields'
 
 export const metadata = { title: 'Training' }
@@ -54,6 +57,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     return { done, all, att: a?.counted ? (a.att / a.counted) * 100 : null, students: stuAgg.find(r => String(r._id) === String(b))?.n ?? 0 }
   }
   const canCreate = can(me, 'training.create')
+  const targets = await Target.find({ batch: { $in: ids } }).sort({ due: 1 }).lean()
 
   return (
     <>
@@ -101,6 +105,32 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         })}
         {!batches.length && <p className="text-sm text-muted">No batches yet{canCreate && me.scope === 'all' ? ' — create a programme, then a batch.' : '.'}</p>}
       </div>
+
+      <Card title="Coding targets" className="mb-6" pad={false}
+        action={can(me, 'training.create') && visibleOpts.length > 0 ? (
+          <Modal label="Add target" title="Add coding-points target" className="btn-ghost py-1 text-xs">
+            <ActionForm action={saveTarget} submit="Add target">
+              <Field label="Batch *"><select name="batch" required className="input"><option value="">Choose…</option>{visibleOpts.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></Field>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Name *"><input name="name" required placeholder="Target-1" className="input" /></Field>
+                <Field label="Due *"><input name="due" type="date" required className="input" /></Field>
+                <Field label="Points *"><input name="points" type="number" min={1} required className="input" /></Field>
+              </div>
+              <p className="text-xs text-muted">Students below the target are flagged “work harder” (at least half) or “improve immediately” (under half).</p>
+            </ActionForm>
+          </Modal>) : undefined}>
+        <Table head={['Batch', 'Target', 'Due', 'Points', '']} empty={<p className="text-center text-sm text-muted">No targets yet. Targets turn coding points into milestones with flags in the Coding report.</p>}>
+          {targets.map(t => (
+            <tr key={String(t._id)}>
+              <td className="td">{bName.get(String(t.batch)) ?? '—'}</td>
+              <td className="td font-medium">{t.name}</td>
+              <td className="td text-muted">{day(t.due)}</td>
+              <td className="td tabular-nums">{fmt(t.points)}</td>
+              <td className="td text-right">{can(me, 'training.delete') && <ActionButton action={deleteTarget} fields={{ id: String(t._id) }} className="btn-ghost px-2 py-1 text-xs" confirm={`Remove ${t.name}?`}>Remove</ActionButton>}</td>
+            </tr>
+          ))}
+        </Table>
+      </Card>
 
       <Card title="Sessions" pad={false}>
         <Filters params={params} q={false}>

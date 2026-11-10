@@ -4,6 +4,7 @@ import { Avatar, Card, Field, KV, PageHeader } from '@/components/ui'
 import { ActionForm } from '@/components/form'
 import { STATUS_LABEL } from '@/components/student-fields'
 import { updateMyProfile } from '@/app/actions/me'
+import { saveProfessional } from '@/app/actions/coding'
 
 export const metadata = { title: 'My Profile' }
 
@@ -25,6 +26,19 @@ export default async function MyProfile() {
             <Field label="Mobile number"><input name="phone" type="tel" defaultValue={s.phone ?? ''} className="input" /></Field>
             <Field label="Personal email"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
             <Field label="Profile picture" hint="JPEG, PNG or WebP, under 300 KB."><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></Field>
+          </ActionForm>
+        </Card>
+        <Card title="Professional details" className="lg:col-span-3">
+          <ActionForm action={saveProfessional} submit="Save" reset={false}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Headline" className="sm:col-span-2"><input name="headline" maxLength={140} defaultValue={s.professional?.headline ?? ''} placeholder="Aspiring backend engineer · Java, Spring, SQL" className="input" /></Field>
+              <Field label="LinkedIn"><input name="linkedin" type="url" defaultValue={s.professional?.linkedin ?? ''} className="input" /></Field>
+              <Field label="GitHub"><input name="github" type="url" defaultValue={s.professional?.github ?? ''} className="input" /></Field>
+              <Field label="Portfolio"><input name="portfolio" type="url" defaultValue={s.professional?.portfolio ?? ''} className="input" /></Field>
+              <Field label="Resume link"><input name="resume" type="url" defaultValue={s.professional?.resume ?? ''} className="input" /></Field>
+              <Field label="Skills" hint="Comma separated" className="sm:col-span-2"><input name="skills" defaultValue={(s.professional?.skills ?? []).join(', ')} className="input" /></Field>
+            </div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="onLeaderboard" defaultChecked={s.onLeaderboard !== false} className="size-4 accent-brand-600" />Show me on the cohort leaderboards (name, department and coding points)</label>
           </ActionForm>
         </Card>
       </div>

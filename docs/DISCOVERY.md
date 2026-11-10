@@ -38,6 +38,15 @@ Public surface: Smart Coder (16–18 weeks; programming basics → DSA → DP/gr
 
 Implication for MARQ: MARQ ranks students per assessment, but it has no **cohort rank that changes over time**, no **practice-points score**, no **external coding-platform ratings**, and no **topic × difficulty breakdown**. These become items 1–3 in the opportunities below.
 
+### Authenticated walkthrough (Claude in Chrome, 11 Nov 2026, student account, read-only)
+
+- **Dashboard:** lists the student's batches (role: Student), each opening a batch area with **Overview** (batch leaderboard with the student's row pinned and a rank chart), **Report** and **Certificate**.
+- **Batch report:** a cohort table with rank (batch and global), roll number, name, attendance %, branch, username, and points per platform (HackerRank, Smart Interviews, LeetCode, InterviewBit, CodeChef, Codeforces, Spoj), each column header showing its formula; overall score; filters on every column; **Score Timeline**; menu with Show Detailed Columns, Download, **View Target** (Target-1 to Target-8 and Target-Final, dated), **Student/Batch Attendance**, **Contest Dashboard** (CodeChef, LeetCode, Codeforces: contests, current rating, contests participated, rating improvement). Red/orange flags mean "improve immediately" or "work harder" against the selected target, and a star means "actively solving".
+- **Leaderboard** (global, batch chips, own row pinned) and **Contest Leaderboard** (platform and contest pickers).
+- **User menu:** My Profile, Dashboard, Contest Leaderboard, Leaderboard, Settings (Personal details, Professional details, Coding profiles, Change password), Logout.
+
+**Built into MARQ from this, in MARQ's own design (nothing that already existed was rebuilt):** Coding Profiles (`/me/coding`: LeetCode/CodeChef/Codeforces sync, points with a visible formula, cohort and batch rank, daily rank history, per-platform cards, points split), Leaderboard (`/me/leaderboard`), Contest Leaderboard (`/me/contests`), Professional details and leaderboard visibility on My Profile, dated **coding targets** per batch (Training) with flags, a **Coding platforms** report for staff (Excel/CSV/print), and a coding card on the Student 360. HackerRank, InterviewBit and Spoj were left out: they have no stable public data source.
+
 ### Gap analysis
 
 | Category | Item |

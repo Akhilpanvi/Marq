@@ -343,6 +343,53 @@ try {
     assert.deepEqual(app!.history.map((h: { to: string }) => h.to), ['Applied', 'Written Test Scheduled'])
   })
 
+  await step('Coding profiles: student links a handle, gets points, rank and appears on both leaderboards', async () => {
+    await s1.goto('/me/coding')
+    await s1.fill('input[name=codeforces]', 'bad handle!')
+    await s1.getByRole('button', { name: 'Save & sync' }).click()
+    await errorShown(s1, "characters usernames can't contain")
+    await s1.fill('input[name=codeforces]', 'tourist') // live public API
+    await s1.getByRole('button', { name: 'Save & sync' }).click()
+    await toast(s1, 'Coding profiles saved and synced')
+    await s1.reload()
+    await s1.getByText('Current rating').first().waitFor()
+    assert.doesNotMatch(await s1.locator('main').innerText(), /Coding points\s*0\b/)
+    await s1.goto('/me/leaderboard')
+    await s1.getByText('(you)').first().waitFor()
+    await s1.goto('/me/contests?platform=codeforces')
+    await s1.getByText('(you)').first().waitFor()
+    await s1.getByRole('button', { name: 'Sync now' }).count() // present only when linked
+  })
+
+  await step('Professional details save; hiding from leaderboard removes the student', async () => {
+    await s1.goto('/me/profile')
+    await s1.fill('input[name=headline]', 'Backend developer in training')
+    await s1.fill('input[name=github]', 'https://github.com/example')
+    await s1.getByLabel(/Show me on the cohort leaderboards/).uncheck()
+    await s1.locator('form', { hasText: 'Headline' }).getByRole('button', { name: 'Save' }).click()
+    await toast(s1, 'Professional details saved')
+    await s1.goto('/me/leaderboard')
+    assert.equal(await s1.getByText('(you)').count(), 0)
+    await s1.goto('/me/profile')
+    await s1.getByLabel(/Show me on the cohort leaderboards/).check()
+    await s1.locator('form', { hasText: 'Headline' }).getByRole('button', { name: 'Save' }).click()
+    await toast(s1, 'Professional details saved')
+  })
+
+  await step('Targets: trainer admin sets a batch target; coding report flags students', async () => {
+    await ta.goto('/training')
+    const d = await open(ta, 'Add target')
+    await d.locator('select[name=batch]').selectOption({ label: 'Batch A' })
+    await d.locator('input[name=name]').fill('Target-1')
+    await d.locator('input[name=due]').fill(new Date(Date.now() - 86400_000).toISOString().slice(0, 10))
+    await d.locator('input[name=points]').fill('100')
+    await d.getByRole('button', { name: 'Add target' }).click()
+    await toast(ta, 'Target added')
+    const csv = await (await ta.request.get('/api/reports/coding?format=csv')).text()
+    assert.match(csv, /Asha Rao.*Target-1 \(100\).*Met/)
+    assert.match(csv, /Bharat Kumar.*Improve immediately/)
+  })
+
   await step('Student isolation: admin pages denied, other student data 403/404 by URL and API', async () => {
     await s1.goto('/students')
     await s1.waitForURL('**/denied')
@@ -458,6 +505,9 @@ try {
   await step('Cron reminder endpoint requires its secret', async () => {
     assert.equal((await fetch(`${BASE}/api/cron/reminders`)).status, 401)
     assert.equal((await fetch(`${BASE}/api/cron/reminders`, { headers: { authorization: 'Bearer test-cron' } })).status, 200)
+    assert.equal((await fetch(`${BASE}/api/cron/coding`)).status, 401)
+    const r = await (await fetch(`${BASE}/api/cron/coding`, { headers: { authorization: 'Bearer test-cron' } })).json()
+    assert.ok(r.ranked >= 1)
   })
 
   await step('Dark theme toggles and persists', async () => {
@@ -468,7 +518,7 @@ try {
   })
 
   await step('Every navigation page renders without server errors for Super Admin', async () => {
-    for (const path of ['/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+    for (const path of ['/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
       assert.equal(r?.status(), 200, path)
     }

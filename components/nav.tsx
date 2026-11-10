@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Banknote, BarChart3, Bell, BookOpen, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
+  Banknote, BarChart3, Bell, BookOpen, Code2, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
   GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users, Video,
 } from 'lucide-react'
 import { hasPerm, type Perm } from '@/lib/rbac'
@@ -56,10 +56,14 @@ const STUDENT: Item[] = [
   { href: '/me/attendance', label: 'My Attendance', icon: CalendarCheck },
   { href: '/me/assessments', label: 'My Assessments', icon: ClipboardCheck },
   { href: '/me/performance', label: 'My Performance', icon: Gauge },
+  { href: '/me/coding', label: 'Coding Profiles', icon: Code2 },
+  { href: '/me/leaderboard', label: 'Leaderboard', icon: Medal },
+  { href: '/me/contests', label: 'Contest Leaderboard', icon: BarChart3 },
   { href: '/me/jobs', label: 'Job Opportunities', icon: Briefcase },
   { href: '/me/applications', label: 'My Applications', icon: ClipboardList },
   { href: '/me/interviews', label: 'My Interviews', icon: Video },
   { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/account', label: 'Change Password', icon: KeyRound },
 ]
 
 function NavLink({ item, label, path }: { item: Item; label: string; path: string }) {

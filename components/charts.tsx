@@ -37,13 +37,13 @@ export function Bars({ data, x, series, height = 260, stacked, domain, horizonta
   )
 }
 
-export function Lines({ data, x, series, height = 260, domain }: { data: Row[]; x: string; series: S[]; height?: number; domain?: [number, number] }) {
+export function Lines({ data, x, series, height = 260, domain, reversed }: { data: Row[]; x: string; series: S[]; height?: number; domain?: [number, number]; reversed?: boolean }) {
   return (
     <Frame height={height} empty={!data.length}>
       <LineChart data={data} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--color-line)" />
         <XAxis dataKey={x} {...axis} interval="preserveStartEnd" />
-        <YAxis {...axis} domain={domain} />
+        <YAxis {...axis} domain={domain} allowDecimals={!!domain} reversed={reversed} />
         <Tooltip {...tip} formatter={fmt} cursor={{ stroke: 'var(--color-muted)', strokeDasharray: '3 3' }} />
         {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={legendText} />}
         {series.map((s, i) => (
@@ -73,7 +73,7 @@ export function Donut({ data, height = 220 }: { data: { name: string; value: num
             <li key={d.name} className="flex items-center gap-2">
               <span className="size-2.5 rounded-full" style={{ background: d.name === 'Other' ? 'var(--color-c5)' : SERIES[i % SERIES.length] }} />
               <span className="flex-1 text-muted">{d.name}</span>
-              <span className="font-medium tabular-nums">{d.value}</span>
+              <span className="font-medium tabular-nums">{d.value.toLocaleString('en-IN')}</span>
             </li>
           ))}
         </ul>

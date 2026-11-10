@@ -1,5 +1,8 @@
 {
   "framework": "nextjs",
   "regions": ["bom1"],
-  "crons": [{ "path": "/api/cron/reminders", "schedule": "30 2 * * *" }]
+  "crons": [
+    { "path": "/api/cron/reminders", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/coding", "schedule": "30 20 * * *" }
+  ]
 }

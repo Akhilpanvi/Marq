@@ -69,6 +69,10 @@ const studentSchema = new Schema(
     batch: { type: ObjectId, ref: 'Batch', index: true },
     mentor: { type: ObjectId, ref: 'User', index: true },
     status: { type: String, enum: ['active', 'on_hold', 'withdrawn', 'completed'], default: 'active', index: true },
+    // student-maintained
+    handles: { leetcode: String, codechef: String, codeforces: String },
+    professional: { headline: String, linkedin: String, github: String, portfolio: String, resume: String, skills: [String] },
+    onLeaderboard: { type: Boolean, default: true },
   },
   ts,
 )
@@ -170,6 +174,44 @@ const evaluationSchema = new Schema(
   ts,
 )
 export const Evaluation = model('Evaluation', evaluationSchema)
+
+/* ───────────── Coding platforms ───────────── */
+
+const codingStatSchema = new Schema(
+  {
+    student: { type: ObjectId, ref: 'Student', required: true },
+    platform: { type: String, enum: ['leetcode', 'codechef', 'codeforces'], required: true },
+    handle: String,
+    status: { type: String, enum: ['ok', 'not_found', 'error'], default: 'ok' },
+    error: String,
+    rating: Number,
+    maxRating: Number,
+    contests: Number,
+    lastChange: Number,
+    solved: Number,
+    easy: Number,
+    medium: Number,
+    hard: Number,
+    history: [{ _id: false, name: String, rating: Number, at: Date }],
+    points: { type: Number, default: 0 },
+    fetchedAt: Date,
+  },
+  ts,
+)
+codingStatSchema.index({ student: 1, platform: 1 }, { unique: true })
+export const CodingStat = model('CodingStat', codingStatSchema)
+
+// one row per student per IST day: coding points and cohort rank, for rank history
+const snapshotSchema = new Schema({ student: { type: ObjectId, ref: 'Student', required: true }, day: { type: String, required: true }, points: Number, rank: Number })
+snapshotSchema.index({ student: 1, day: 1 }, { unique: true })
+snapshotSchema.index({ day: 1 })
+export const ScoreSnapshot = model('ScoreSnapshot', snapshotSchema)
+
+const targetSchema = new Schema(
+  { batch: { type: ObjectId, ref: 'Batch', required: true, index: true }, name: { type: String, required: true }, due: { type: Date, required: true }, points: { type: Number, required: true, min: 0 } },
+  ts,
+)
+export const Target = model('Target', targetSchema)
 
 /* ───────────── Placements ───────────── */
 

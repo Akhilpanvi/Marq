@@ -6,7 +6,9 @@ import { journey } from '@/lib/journey'
 import { batchOptions, mentorOptions } from '@/lib/options'
 import { placementStatus, statusTone, OFFERED } from '@/lib/placement'
 import { day, dayTime, pct } from '@/lib/format'
-import { Student, User } from '@/models'
+import { CodingStat, Student, User } from '@/models'
+import { PLATFORMS, PLATFORM_KEYS } from '@/lib/coding-points'
+import { fmt } from '@/lib/format'
 import { Avatar, Badge, Card, Empty, KV, PageHeader, Score, Table } from '@/components/ui'
 import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { StudentFields, STATUS_LABEL } from '@/components/student-fields'
@@ -34,6 +36,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
     can(me, 'students.edit') ? batchOptions() : [],
     can(me, 'students.edit') ? mentorOptions() : [],
   ])
+  const coding = await CodingStat.find({ student: s._id }).lean()
   const placed = placementStatus(j.apps)
   const offers = j.apps.filter(a => OFFERED.includes(a.status))
   const show = (p: Parameters<typeof can>[1]) => can(me, p)
@@ -134,6 +137,18 @@ export default async function Student360({ params }: { params: Promise<{ id: str
             </div>
           </Card>
         </div>
+
+        <Card title={`Coding profiles · ${fmt(coding.reduce((t, c) => t + (c.points ?? 0), 0))} points`} icon={Activity}>
+          {coding.length ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {PLATFORM_KEYS.map(p => { const c = coding.find(x => x.platform === p); return c ? (
+                <div key={p} className="rounded-lg border border-line p-3 text-sm">
+                  <div className="flex justify-between"><span className="font-medium">{PLATFORMS[p].label}</span><a href={PLATFORMS[p].url(c.handle ?? '')} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">{c.handle}</a></div>
+                  {c.status === 'not_found' ? <p className="mt-1 text-xs text-muted">Username not found</p> : <p className="mt-1 text-muted">Rating <b className="text-fg">{fmt(c.rating)}</b> (best {fmt(c.maxRating)}) · {c.contests ?? 0} contests{c.solved != null && p !== 'codeforces' ? ` · ${c.solved} solved` : ''}</p>}
+                </div>) : null })}
+            </div>
+          ) : <Empty>The student hasn&apos;t linked coding profiles yet.</Empty>}
+        </Card>
 
         <Card title="Mentor evaluations" icon={MessagesSquare}>
           <EvaluationList items={j.evaluations} mentorName={j.mentorName} />
