@@ -18,7 +18,7 @@ export async function sendMail({ to, subject, text, html }: { to: string; subjec
     connectionTimeout: 10_000,
     socketTimeout: 15_000,
   })
-  await g.smtp.sendMail({ from: process.env.SMTP_FROM ?? `MARQ <${process.env.SMTP_USER}>`, to, subject, text, html })
+  await g.smtp.sendMail({ from: process.env.SMTP_FROM ?? 'MARQ · KL University <marq@marq.klef.me>', to, subject, text, html })
   return true
 }
 
