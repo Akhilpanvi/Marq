@@ -16,6 +16,14 @@ export async function seedRoles() {
     )
   // superadmin always keeps full control, even if someone edited it
   await Role.updateOne({ key: 'superadmin' }, { $set: { perms: ['*'] } })
+  // permissions added to built-in roles after first release (idempotent)
+  for (const [key, perms] of Object.entries(ADDED_PERMS)) await Role.updateOne({ key }, { $addToSet: { perms: { $each: perms } } })
+}
+
+/** Daily register (Nov 2026): assistants post attendance, the Director approves changes. */
+const ADDED_PERMS: Record<string, string[]> = {
+  admin_assistant: ['attendance.view', 'attendance.create'],
+  director: ['attendance.approve'],
 }
 
 async function main() {

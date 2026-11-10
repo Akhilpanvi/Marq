@@ -44,11 +44,11 @@ export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 
   },
   {
     key: 'admin_assistant', name: 'Admin Assistant', scope: 'all', description: 'Student records, onboarding, bulk uploads and student accounts.',
-    perms: [...all('students', 'view', 'create', 'edit', 'export'), ...all('users', 'view', 'create', 'edit'), ...all('reports', 'view', 'export'), ...view('attendance', 'training')],
+    perms: [...all('students', 'view', 'create', 'edit', 'export'), ...all('users', 'view', 'create', 'edit'), ...all('reports', 'view', 'export'), ...all('attendance', 'view', 'create'), 'training.view'],
   },
   {
     key: 'director', name: 'Director', scope: 'all', description: 'Executive read-only view of the whole programme.',
-    perms: [...view('students', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews', 'announcements'), ...all('reports', 'view', 'export')],
+    perms: [...view('students', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews', 'announcements'), ...all('reports', 'view', 'export'), 'attendance.approve'],
   },
   {
     key: 'director_accounts', name: 'Director Accounts', scope: 'all', description: 'Training expenditure, budget and financial reports.',

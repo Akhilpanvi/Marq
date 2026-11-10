@@ -52,6 +52,7 @@ export async function saveSession(_: State, fd: FormData): Promise<State> {
     if (id) {
       const before = await TrainingSession.findById(id).select('-feedback').lean()
       if (!before) throw new Invalid('Session not found.')
+      if (before.register) throw new Invalid('Daily-register periods are locked.')
       await assertBatchAccess(me, before.batch)
       await TrainingSession.updateOne({ _id: id }, { $set: doc })
       if (+before.date !== +when) await Attendance.updateMany({ session: id }, { $set: { date: when } })
@@ -116,8 +117,9 @@ const STATUSES = ['present', 'absent', 'late', 'excused'] as const
 export async function markAttendance(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const me = await guard('attendance.create')
-    const session = await TrainingSession.findById(oid(fd, 'session')).select('batch date title').lean()
+    const session = await TrainingSession.findById(oid(fd, 'session')).select('batch date title register').lean()
     if (!session) throw new Invalid('Session not found.')
+    if (session.register) throw new Invalid('This period belongs to a locked daily register. Request a change from the Daily Register page.')
     await assertBatchAccess(me, session.batch)
     const students = await Student.find({ batch: session.batch }).select('_id').lean()
     const allowed = new Set(students.map(s => String(s._id)))

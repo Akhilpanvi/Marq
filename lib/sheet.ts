@@ -1,10 +1,44 @@
 import 'server-only'
 import ExcelJS from 'exceljs'
-import { parseCsv } from './csv'
+import { parseCsv, parseCsvRows } from './csv'
 import { Invalid } from './form'
 
 const MAX_BYTES = 2 * 1024 * 1024
 const MAX_ROWS = 5000
+
+/** First sheet of an .xlsx/.csv upload as raw text rows (no header assumptions). Validates type and size. */
+export async function readRawRows(file: FormDataEntryValue | null): Promise<string[][]> {
+  if (!(file instanceof File) || !file.size) throw new Invalid('Choose an Excel (.xlsx) or CSV file.')
+  if (file.size > MAX_BYTES) throw new Invalid('File is larger than 2 MB.')
+  const name = file.name.toLowerCase()
+  const buf = Buffer.from(await file.arrayBuffer())
+  if (name.endsWith('.csv')) return parseCsvRows(buf.toString('utf8').replace(/^\uFEFF/, ''))
+  if (!name.endsWith('.xlsx') || buf.subarray(0, 2).toString() !== 'PK') throw new Invalid('Upload the register as .xlsx (Excel) or .csv.')
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(buf as unknown as ArrayBuffer)
+  const ws = wb.worksheets[0]
+  if (!ws) throw new Invalid('The workbook has no sheets.')
+  const rows: string[][] = []
+  ws.eachRow({ includeEmpty: true }, (row, n) => {
+    const r: string[] = []
+    row.eachCell({ includeEmpty: true }, (c, i) => (r[i - 1] = cellText(c.value).trim()))
+    rows[n - 1] = Array.from(r, v => v ?? '')
+  })
+  if (rows.length > MAX_ROWS) throw new Invalid(`At most ${MAX_ROWS} rows per upload.`)
+  return Array.from(rows, r => r ?? [])
+}
+
+function cellText(v: ExcelJS.CellValue): string {
+  if (v == null) return ''
+  if (v instanceof Date) return `${String(v.getUTCDate()).padStart(2, '0')}.${String(v.getUTCMonth() + 1).padStart(2, '0')}.${v.getUTCFullYear()}`
+  if (typeof v === 'object') {
+    if ('text' in v && v.text != null) return String(v.text)
+    if ('result' in v) return cellText(v.result as ExcelJS.CellValue)
+    if ('richText' in v) return v.richText.map(t => t.text).join('')
+    if ('hyperlink' in v) return String(v.hyperlink)
+  }
+  return String(v)
+}
 
 /** Reads the first sheet of an .xlsx or a .csv upload into header→value rows. Validates type and size. */
 export async function readSheet(file: FormDataEntryValue | null): Promise<Record<string, string>[]> {

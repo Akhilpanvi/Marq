@@ -1,0 +1,152 @@
+import 'server-only'
+import ExcelJS from 'exceljs'
+import type { Types } from 'mongoose'
+import { Attendance, DailyRegister, Student, TrainingSession } from '@/models'
+import { columns, span, type Period } from './periods'
+import { safeCell } from './sheet'
+
+const dmy = (day: string) => day.split('-').reverse().join('.')
+const STUDENT_COLS = ['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name']
+
+/** Marks of every register in [from, to] (inclusive, YYYY-MM-DD), limited to `scope` students when given. */
+export async function loadRegisters(from?: string, to?: string, scope?: Types.ObjectId[] | null) {
+  const regs = await DailyRegister.find({ ...(from || to ? { day: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : {}) }).sort({ day: 1 }).lean()
+  const sessions = await TrainingSession.find({ register: { $in: regs.map(r => r._id) } }).select('register start').lean()
+  const marks = await Attendance.find({ session: { $in: sessions.map(s => s._id) }, ...(scope ? { student: { $in: scope } } : {}) }).select('session student status history').lean()
+  const sessionOf = new Map(sessions.map(s => [String(s._id), s]))
+  const students = await Student.find({ _id: { $in: [...new Set(marks.map(m => String(m.student)))] } }).select('regNo name department specialization').sort({ regNo: 1 }).lean()
+  // status[studentId][day][periodNo]
+  const status = new Map<string, Map<string, Map<number, string>>>()
+  const corrected = new Set<string>()
+  for (const m of marks) {
+    const s = sessionOf.get(String(m.session))!
+    const reg = regs.find(r => String(r._id) === String(s.register))!
+    const p = reg.periods.find(x => x.start === s.start)
+    if (!p?.no) continue
+    const byDay = status.get(String(m.student)) ?? status.set(String(m.student), new Map()).get(String(m.student))!
+    const byP = byDay.get(reg.day) ?? byDay.set(reg.day, new Map()).get(reg.day)!
+    byP.set(p.no, m.status)
+    if (m.history.length) corrected.add(`${m.student}|${reg.day}|${p.no}`)
+  }
+  return { regs: regs.map(r => ({ ...r, periods: r.periods as Period[] })), students, status, corrected }
+}
+
+const mark = (st?: string) => (st === 'absent' ? 'A' : st ? 'P' : '')
+
+/** The college sheet: 3 header rows (period no., time, date), P/A cells, Lunch Break column. */
+export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType<typeof loadRegisters>>) {
+  const cols = columns(periods)
+  const head = [
+    [...STUDENT_COLS, ...cols.map(c => (c.kind === 'period' ? String(c.p.no) : ''))],
+    [...STUDENT_COLS.map(() => ''), ...cols.map(c => (c.kind === 'period' ? span(c.p) : span(c)))],
+    [...STUDENT_COLS.map(() => ''), dmy(day), ...cols.slice(1).map(() => '')],
+  ]
+  const body = data.students.map((s, i) => [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(day)?.get(c.p.no))))])
+  return { head, body, cols }
+}
+
+const thin = { style: 'thin' as const, color: { argb: 'FFBFBFBF' } }
+const border = { top: thin, left: thin, bottom: thin, right: thin }
+const fill = (argb: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb } })
+const ABSENT = 'FFF4B6B6', HEAD = 'FFF8CBAD', PERIOD = 'FFC6E0B4'
+
+function styleHeader(ws: ExcelJS.Worksheet, rows: number, studentCols: number) {
+  for (let r = 1; r <= rows; r++)
+    ws.getRow(r).eachCell({ includeEmpty: true }, (c, i) => {
+      c.font = { bold: true }
+      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      c.fill = fill(i <= studentCols ? HEAD : PERIOD)
+      c.border = border
+    })
+  for (let i = 1; i <= studentCols; i++) ws.mergeCells(1, i, rows, i)
+}
+
+export async function dayWorkbook(day: string, periods: Period[], data: Awaited<ReturnType<typeof loadRegisters>>) {
+  const { head, body, cols } = dayRows(day, periods, data)
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'MARQ · KL University'
+  const ws = wb.addWorksheet(`Attendance ${dmy(day)}`)
+  head.forEach(r => ws.addRow(r))
+  body.forEach(r => ws.addRow(r.map(safeCell)))
+  styleHeader(ws, 3, STUDENT_COLS.length)
+  ws.mergeCells(3, STUDENT_COLS.length + 1, 3, STUDENT_COLS.length + cols.length)
+  for (let r = 4; r <= ws.rowCount; r++)
+    ws.getRow(r).eachCell({ includeEmpty: true }, (c, i) => {
+      c.border = border
+      if (i > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
+      if (c.value === 'A') c.fill = fill(ABSENT)
+    })
+  ws.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...cols.map(() => ({ width: 14 }))]
+  ws.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 3 }]
+  return Buffer.from(await wb.xlsx.writeBuffer())
+}
+
+/** Per student: attended/held per day, then totals and the percentage last. */
+export function summaryRows(data: Awaited<ReturnType<typeof loadRegisters>>) {
+  const head = [...STUDENT_COLS, ...data.regs.map(r => `${dmy(r.day)} (of ${r.periods.length})`), 'Total Held', 'Total Attended', 'Total Absent', 'Attendance %']
+  const body = data.students.map((s, i) => {
+    let held = 0, attended = 0
+    const days = data.regs.map(r => {
+      const byP = data.status.get(String(s._id))?.get(r.day)
+      if (!byP) return '—'
+      const n = [...byP.values()].filter(v => v !== 'absent').length
+      held += byP.size
+      attended += n
+      return `${n}/${byP.size}`
+    })
+    return [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...days, held, attended, held - attended, held ? Math.round((attended / held) * 10000) / 100 : null] as (string | number | null)[]
+  })
+  return { head, body }
+}
+
+export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadRegisters>>) {
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'MARQ · KL University'
+
+  const { head, body } = summaryRows(data)
+  const sum = wb.addWorksheet('Summary')
+  sum.addRow(head)
+  body.forEach(r => sum.addRow(r.map(v => (typeof v === 'number' || v == null ? v : safeCell(v)))))
+  sum.getRow(1).eachCell(c => ((c.font = { bold: true }), (c.fill = fill(HEAD)), (c.border = border), (c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true })))
+  const pctCol = head.length
+  for (let r = 2; r <= sum.rowCount; r++) {
+    sum.getRow(r).eachCell({ includeEmpty: true }, c => (c.border = border))
+    const pc = sum.getRow(r).getCell(pctCol)
+    pc.numFmt = '0.00"%"'
+    pc.font = { bold: true }
+    if (typeof pc.value === 'number' && pc.value < 75) pc.fill = fill(ABSENT)
+  }
+  sum.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...data.regs.map(() => ({ width: 13 })), { width: 11 }, { width: 14 }, { width: 12 }, { width: 13 }]
+  sum.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 1 }]
+
+  // Detailed: every day × period, P/A
+  const det = wb.addWorksheet('Detailed')
+  const dayHead = [...STUDENT_COLS], pHead = [...STUDENT_COLS.map(() => '')]
+  const spans: [number, number][] = []
+  for (const r of data.regs) {
+    spans.push([dayHead.length + 1, dayHead.length + r.periods.length])
+    r.periods.forEach((p, i) => (dayHead.push(i ? '' : dmy(r.day)), pHead.push(`P${p.no}`)))
+  }
+  dayHead.push('Held', 'Attended', 'Attendance %'); pHead.push('', '', '')
+  det.addRow(dayHead)
+  det.addRow(pHead)
+  styleHeader(det, 2, STUDENT_COLS.length)
+  for (const [a, b] of spans) if (b > a) det.mergeCells(1, a, 1, b)
+  const n = dayHead.length
+  for (const i of [n - 2, n - 1, n]) det.mergeCells(1, i, 2, i)
+  data.students.forEach((s, i) => {
+    const cells = data.regs.flatMap(r => r.periods.map(p => mark(data.status.get(String(s._id))?.get(r.day)?.get(p.no))))
+    const held = cells.filter(Boolean).length, att = cells.filter(c => c === 'P').length
+    const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...cells, held, att, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
+    row.eachCell({ includeEmpty: true }, (c, j) => {
+      c.border = border
+      if (j > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
+      if (c.value === 'A') c.fill = fill(ABSENT)
+    })
+    row.getCell(n).numFmt = '0.00"%"'
+  })
+  det.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...Array.from({ length: n - 5 }, () => ({ width: 6 }))]
+  det.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 2 }]
+
+  return Buffer.from(await wb.xlsx.writeBuffer())
+}

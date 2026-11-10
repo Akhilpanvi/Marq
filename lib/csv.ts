@@ -1,5 +1,5 @@
-/** Minimal RFC4180 CSV reader: quoted cells, escaped quotes, CRLF or LF. */
-export function parseCsv(text: string) {
+/** Minimal RFC4180 CSV reader: quoted cells, escaped quotes, CRLF or LF. Rows as arrays. */
+export function parseCsvRows(text: string) {
   const rows: string[][] = [[]]
   let cell = '', quoted = false
   for (let i = 0; i < text.length; i++) {
@@ -14,7 +14,12 @@ export function parseCsv(text: string) {
     else if (c !== '\r') cell += c
   }
   rows.at(-1)!.push(cell.trim())
-  const [head, ...body] = rows.filter(r => r.some(Boolean))
+  return rows.filter(r => r.some(Boolean))
+}
+
+/** CSV with a header row → objects keyed by header. */
+export function parseCsv(text: string) {
+  const [head, ...body] = parseCsvRows(text)
   if (!head) return []
   return body.map(r => Object.fromEntries(head.map((h, i) => [h.trim(), r[i] ?? ''])))
 }

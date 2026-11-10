@@ -118,7 +118,7 @@ export async function rateLimit(key: string, max: number, windowSec: number) {
 }
 
 /** Assigned-scope staff (trainers) may only act on batches they train. */
-export async function assertBatchAccess(me: Me, batchId: string | Types.ObjectId) {
+export async function assertBatchAccess(me: Me, batchId?: string | Types.ObjectId | null) {
   if (me.scope === 'all') return
-  if (!(await Batch.exists({ _id: batchId, trainers: me._id }))) throw new Invalid('You can only manage batches you train.')
+  if (!batchId || !(await Batch.exists({ _id: batchId, trainers: me._id }))) throw new Invalid('You can only manage batches you train.')
 }

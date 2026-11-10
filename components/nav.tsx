@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import {
   Banknote, BarChart3, Bell, BookOpen, Code2, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
@@ -23,6 +24,7 @@ const ADMIN: { group: string; items: Item[] }[] = [
     group: 'Training',
     items: [
       { href: '/training', label: 'Training', mine: 'Training Progress', icon: BookOpen, perm: 'training.view' },
+      { href: '/attendance/register', label: 'Daily Register', icon: ClipboardList, perm: 'attendance.view' },
       { href: '/attendance', label: 'Attendance', icon: CalendarCheck, perm: 'attendance.view' },
       { href: '/assessments', label: 'Assessments', icon: ClipboardCheck, perm: 'assessments.view' },
       { href: '/performance', label: 'Performance Intelligence', icon: Gauge, perm: 'performance.view' },
@@ -67,10 +69,14 @@ const STUDENT: Item[] = [
 ]
 
 function NavLink({ item, label, path }: { item: Item; label: string; path: string }) {
-  const active = item.href === '/me' ? path === '/me' : path === item.href || path.startsWith(item.href + '/')
+  const active = item.href === '/me' || item.href === '/attendance' ? path === item.href : path === item.href || path.startsWith(item.href + '/')
   const Icon = item.icon
+  const ref = useRef<HTMLAnchorElement>(null)
+  // on phones the nav is a horizontal strip: keep the current page's tab visible
+  useEffect(() => { if (active && window.innerWidth < 1024) ref.current?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [active])
   return (
     <Link
+      ref={ref}
       href={item.href}
       prefetch={false}
       aria-current={active ? 'page' : undefined}
@@ -96,7 +102,7 @@ export function Nav({ perms, student, assigned, unread }: { perms: string[]; stu
         const items = g.items.filter(i => !i.perm || hasPerm(perms, i.perm))
         if (!items.length) return null
         return (
-          <div key={g.group} className="flex gap-1 lg:flex-col lg:gap-0.5">
+          <div key={g.group} className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5">
             {g.group && <div className="hidden px-3 pb-1 text-[11px] font-semibold tracking-wider text-muted/80 uppercase lg:block">{g.group}</div>}
             {items.map(i => <NavLink key={i.href} item={i} path={path} label={assigned && i.mine ? i.mine : i.label} />)}
           </div>

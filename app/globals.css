@@ -36,10 +36,21 @@
 :root {
   color-scheme: light;
   --marq-m: #b4232c; --marq-a: #e8902a; --marq-r: #3b3fb6; --marq-q: #0f8a7e;
+  /* wordmark gradients: light top → deep base, same four colours */
+  --marq-m1: #cc3a43; --marq-m2: #8c1820;
+  --marq-a1: #f1a447; --marq-a2: #bf6c14;
+  --marq-r1: #5357cf; --marq-r2: #2b2f94;
+  --marq-q1: #1aa392; --marq-q2: #0a6b62;
+  --marq-shadow: rgb(26 16 32 / 0.22);
 }
 .dark {
   color-scheme: dark;
   --marq-m: #f0646c; --marq-a: #f5b054; --marq-r: #8c90ff; --marq-q: #3cc9b5;
+  --marq-m1: #f58a90; --marq-m2: #d9444e;
+  --marq-a1: #f8c477; --marq-a2: #e3922f;
+  --marq-r1: #a9acff; --marq-r2: #6d71ee;
+  --marq-q1: #62dcc8; --marq-q2: #22a893;
+  --marq-shadow: rgb(0 0 0 / 0.55);
   --color-bg: #0b0d12;
   --color-surface: #12151c;
   --color-subtle: #1a1e27;
@@ -78,3 +89,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45); }
   main { max-width: none !important; padding: 0 !important; }
   .card { box-shadow: none; break-inside: avoid; }
 }
+
+/* phone nav strip: scroll without a visible scrollbar */
+nav.overflow-x-auto, nav .overflow-x-auto { scrollbar-width: none; }
+nav.overflow-x-auto::-webkit-scrollbar { display: none; }

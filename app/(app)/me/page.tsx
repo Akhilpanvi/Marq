@@ -37,7 +37,7 @@ export default async function StudentDashboard() {
           <div className="text-sm text-muted">{s.regNo} · {[s.department, s.specialization].filter(Boolean).join(' · ')}</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5"><Badge tone="blue">{j.batch?.name ?? 'No batch yet'}</Badge><Badge tone={placed.tone}>{placed.label}</Badge></div>
         </div>
-        <div className="w-48">
+        <div className="w-full sm:w-48">
           <div className="mb-1 flex justify-between text-xs text-muted"><span>Training progress</span><span>{j.training.completed}/{j.training.total}</span></div>
           <Meter value={j.training.total ? (j.training.completed / j.training.total) * 100 : 0} tone="bg-[var(--color-c1)]" label="Training progress" />
         </div>

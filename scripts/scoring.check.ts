@@ -40,3 +40,27 @@ assert.equal(targetFlag(600, 1000), 'behind')
 assert.equal(targetFlag(400, 1000), 'far')
 assert.equal(targetFlag(400, null), null)
 console.log('coding points: ok')
+
+import { parseRegister } from '../lib/register-parse'
+import { columns, clock } from '../lib/periods'
+{
+  // the college sheet layout (merged headers arrive as the value in the top-left cell)
+  const rows = [
+    ['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name', '3', '4', '5', '6', '', '8', '9'],
+    ['', '', '', '', '', '9.20 AM to 10.10 AM', '10.10 AM to 11.00 AM', '11.10 AM to 12.00 PM', '12.00 PM to 12.50 PM', '12.50 PM to 1.50 PM', '1.50 PM to 2.40 PM', '2.40 PM to 3.30 PM'],
+    ['', '', '', '', '', '02.11.2026'],
+    ['1', '2300030012', 'CSE', 'CSE2', 'Addepalli Omkar', 'P', 'P', 'P', 'P', 'Lunch Break', 'P', 'P'],
+    ['11', '2300030442', 'CSE', 'HTR', 'Mopuri Guru Shailesh', 'A', 'A', 'A', 'A', 'Lunch Break', 'A', 'a'],
+  ]
+  const r = parseRegister(rows)
+  assert.equal(r.day, '2026-11-02')
+  assert.deepEqual(r.periods.map(p => p.no), [3, 4, 5, 6, 8, 9])
+  assert.deepEqual(r.periods[4], { no: 8, start: '13:50', end: '14:40' })
+  assert.deepEqual(Object.values(r.marks['2300030442']), ['A', 'A', 'A', 'A', 'A', 'A'])
+  assert.equal(r.marks['2300030012'][9], 'P')
+  assert.equal(r.blanks, 0)
+  assert.equal(parseRegister(rows.filter((_, i) => i !== 2), 'Attendance 05-11-2026.xlsx').day, '2026-11-05')
+  assert.equal(columns(r.periods).filter(c => c.kind === 'break').length, 1)
+  assert.equal(clock('13:50'), '1.50 PM')
+  console.log('register parser: ok')
+}

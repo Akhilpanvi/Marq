@@ -22,7 +22,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   const page = pageOf(params)
   const scope = await visibleBatches(me)
   const batchFilter = scope ? { _id: { $in: scope } } : {}
-  const sessFilter: Record<string, unknown> = scope ? { batch: { $in: scope } } : {}
+  const sessFilter: Record<string, unknown> = { register: null, ...(scope ? { batch: { $in: scope } } : {}) } // daily-register periods live on their own page
   const batch = sp(params, 'batch'), status = sp(params, 'status')
   if (batch) sessFilter.batch = scope && !scope.some(b => String(b) === batch) ? null : batch
   if (status) sessFilter.status = status

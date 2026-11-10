@@ -428,7 +428,7 @@ try {
     await d.getByRole('button', { name: 'Submit for approval' }).click()
     await toast(ta, 'pending approval')
     const da = await login(staff['Director Accounts'])
-    await da.getByText('Accounts Overview').waitFor()
+    await da.getByRole('heading', { name: 'Accounts Overview' }).waitFor()
     await da.goto('/finance')
     await da.getByRole('button', { name: 'Approve' }).click()
     await toast(da, 'Marked approved')
@@ -443,7 +443,7 @@ try {
 
   await step('Director: executive overview, read-only, no finance or user management', async () => {
     const dir = await login(staff.Director)
-    await dir.getByText('Executive Overview').waitFor()
+    await dir.getByRole('heading', { name: 'Executive Overview' }).waitFor()
     await dir.goto('/students')
     assert.equal(await dir.getByRole('button', { name: /Add student/ }).count(), 0)
     for (const path of ['/finance', '/users', '/audit']) {
@@ -451,6 +451,70 @@ try {
       await dir.waitForURL('**/denied')
     }
     assert.equal((await dir.request.get('/api/reports/performance?format=xlsx')).status(), 200)
+    await dir.context().close()
+  })
+
+  await step('Daily register: upload the college sheet, auto-read date and marks, Verify, Confirm, locked', async () => {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Sheet1')
+    const d = new Date(Date.now() - 86400_000).toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata' }).replace(/\//g, '.')
+    ws.addRow(['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name', 3, 4, 5, 6, '', 8, 9])
+    ws.addRow(['', '', '', '', '', '9.20 AM to 10.10 AM', '10.10 AM to 11.00 AM', '11.10 AM to 12.00 PM', '12.00 PM to 12.50 PM', '12.50 PM to 1.50 PM', '1.50 PM to 2.40 PM', '2.40 PM to 3.30 PM'])
+    ws.addRow(['', '', '', '', '', d])
+    ws.mergeCells(3, 6, 3, 12)
+    const rows: [string, string, string[]][] = [['2300030001', 'Asha Rao', ['P', 'P', 'P', 'P', 'P', 'P']], ['2300030002', 'Bharat Kumar', ['A', 'A', 'P', 'P', 'P', 'P']], ['2300030003', 'Chitra Devi', ['A', 'A', 'A', 'A', 'A', 'A']], ['2300030004', 'Dev Patel', ['P', 'P', 'P', 'P', 'P', 'P']]]
+    rows.forEach(([id, n, m], i) => ws.addRow([i + 1, id, 'CSE', 'CSE1', n, ...m.slice(0, 4), 'Lunch Break', ...m.slice(4)]))
+    const file = join(tmp, `attendance ${d}.xlsx`)
+    await wb.xlsx.writeFile(file)
+
+    await aa.goto('/attendance/register')
+    await aa.setInputFiles('input[type=file]', file)
+    await toast(aa, /Read 4 students for/)
+    const iso = d.split('.').reverse().join('-')
+    assert.equal(await aa.locator('input[type=date]').nth(1).inputValue(), iso)
+    await aa.getByRole('button', { name: 'Verify' }).click()
+    const v = aa.locator('dialog[open]')
+    await v.getByText('2 absentees').waitFor()
+    await v.getByText('All periods').waitFor() // Chitra
+    await v.getByText('3, 4').waitFor() // Bharat
+    await v.getByRole('button', { name: 'Confirm & lock' }).click()
+    await toast(aa, /saved and locked/)
+    await aa.getByText(/Posted by .* · locked/).waitFor()
+    assert.equal(await aa.getByRole('button', { name: 'Verify' }).count(), 0)
+    const marks = await mongoose.connection.collection('attendances').countDocuments({ date: { $gte: new Date(`${iso}T00:00:00+05:30`) }, status: 'absent' })
+    assert.equal(marks, 8) // 2 + 6
+    ;(globalThis as Record<string, unknown>).regDay = iso
+  })
+
+  await step('Locked register: change needs a reason, assistant cannot approve, Director approves, history kept', async () => {
+    const iso = (globalThis as Record<string, unknown>).regDay as string
+    await aa.goto(`/attendance/register?day=${iso}`)
+    const d = await open(aa, 'Request change')
+    await d.locator('select[name=student]').selectOption({ label: '2300030002 · Bharat Kumar' })
+    await d.locator('select[name=period]').selectOption('3')
+    await d.locator('textarea[name=reason]').fill('Was at the placement cell with permission')
+    await d.getByRole('button', { name: 'Send for Director approval' }).click()
+    await toast(aa, /Change requested/)
+    await aa.reload()
+    assert.equal(await aa.getByRole('button', { name: 'Approve' }).count(), 0)
+    const dir = await login(staff.Director)
+    await dir.goto('/notifications')
+    await dir.getByText(/Attendance change awaiting approval/).waitFor()
+    await dir.goto(`/attendance/register?day=${iso}`)
+    await dir.getByRole('button', { name: 'Approve' }).click()
+    await toast(dir, 'Approved and applied')
+    const bharat = await mongoose.connection.collection('students').findOne({ regNo: '2300030002' })
+    const absentNow = await mongoose.connection.collection('attendances').countDocuments({ student: bharat!._id, date: { $gte: new Date(`${iso}T00:00:00+05:30`) }, status: 'absent' })
+    assert.equal(absentNow, 1)
+    const day = await (await dir.request.get(`/api/attendance/day?day=${iso}&format=csv`)).text()
+    assert.match(day, /Lunch Break/)
+    assert.match(day, /"Chitra Devi","A","A","A","A","Lunch Break","A","A"/)
+    const cons = await (await dir.request.get('/api/attendance/consolidated?format=csv')).text()
+    assert.match(cons, /Attendance %/)
+    assert.match(cons, /"Bharat Kumar","5\/6","6","5","1","83.33"/)
+    const x = await dir.request.get('/api/attendance/consolidated?format=xlsx')
+    assert.match(x.headers()['content-type'], /spreadsheetml/)
     await dir.context().close()
   })
 
@@ -467,7 +531,7 @@ try {
   await step('Audit log records imports, corrections, status changes and finance approvals', async () => {
     const actions = await mongoose.connection.collection('auditlogs').distinct('action')
     for (const a of ['student.import', 'attendance.correct', 'results.update', 'application.status', 'finance.approved', 'account.bulkCreate', 'user.create', 'report.export']) assert.ok(actions.includes(a), `missing audit ${a}`)
-    await sa.goto('/audit')
+    await sa.goto('/audit?q=attendance.correct')
     await sa.getByText('attendance.correct').first().waitFor()
   })
 
@@ -520,7 +584,7 @@ try {
   })
 
   await step('Every navigation page renders without server errors for Super Admin', async () => {
-    for (const path of ['/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
       assert.equal(r?.status(), 200, path)
     }

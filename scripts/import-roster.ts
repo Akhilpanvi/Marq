@@ -10,7 +10,7 @@ import { AuditLog, Student } from '../models'
 const rows = parseCsv(readFileSync(process.argv[2], 'utf8'))
 const errors: string[] = []
 const docs = rows.map((r, i) => {
-  const d = { regNo: (r['Registration Number'] ?? '').toUpperCase(), name: r['Full Name'], email: (r['University Email'] ?? '').toLowerCase(), department: r['Department'], specialization: r['Specialization'], status: 'active' }
+  const d = { regNo: (r['Registration Number'] ?? '').toUpperCase(), name: r['Full Name'], email: (r['University Email'] ?? '').toLowerCase(), department: r['Department'], specialization: r['Specialization'], status: 'active' as const }
   if (!REGNO.test(d.regNo) || !d.name || !EMAIL.test(d.email)) errors.push(`row ${i + 2}`)
   return d
 })

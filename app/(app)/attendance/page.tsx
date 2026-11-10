@@ -66,6 +66,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader title="Attendance" description="Present and late count as attended; excused sessions are left out of the percentage.">
+        <Link className="btn-primary" href="/attendance/register">Daily Register</Link>
+        <a className="btn-outline" href="/api/attendance/consolidated?format=xlsx"><Download className="size-4" />Consolidated Excel</a>
         {can(me, 'reports.export') && <a className="btn-outline" href={`/api/reports/attendance?format=xlsx&${qs}`}><Download className="size-4" />Export</a>}
       </PageHeader>
       <Grid>

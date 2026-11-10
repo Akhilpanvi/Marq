@@ -94,7 +94,8 @@ export const Batch = model('Batch', batchSchema)
 
 const sessionSchema = new Schema(
   {
-    batch: { type: ObjectId, ref: 'Batch', required: true, index: true },
+    batch: { type: ObjectId, ref: 'Batch', index: true }, // null for cohort-wide daily-register periods
+    register: { type: ObjectId, ref: 'DailyRegister', index: true }, // set = locked; changes only via director-approved requests
     title: { type: String, required: true, trim: true },
     topics: [String],
     trainer: { type: ObjectId, ref: 'User', index: true },
@@ -110,6 +111,33 @@ const sessionSchema = new Schema(
   ts,
 )
 export const TrainingSession = model('TrainingSession', sessionSchema)
+
+// Cohort-wide period attendance for one IST day, posted once and then locked.
+const registerSchema = new Schema(
+  {
+    day: { type: String, required: true, unique: true }, // YYYY-MM-DD (IST)
+    periods: [{ _id: false, no: Number, start: String, end: String }],
+    students: Number,
+    absences: Number,
+    submittedBy: { type: ObjectId, ref: 'User' },
+    requests: [{
+      student: { type: ObjectId, ref: 'Student' },
+      period: Number,
+      from: String,
+      to: { type: String, enum: ['present', 'absent'] },
+      reason: String,
+      by: { type: ObjectId, ref: 'User' },
+      byName: String,
+      at: { type: Date, default: Date.now },
+      status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+      decidedBy: { type: ObjectId, ref: 'User' },
+      decidedByName: String,
+      decidedAt: Date,
+    }],
+  },
+  ts,
+)
+export const DailyRegister = model('DailyRegister', registerSchema)
 
 const correction = { from: String, to: String, by: { type: ObjectId, ref: 'User' }, at: { type: Date, default: Date.now }, reason: String }
 const attendanceSchema = new Schema(

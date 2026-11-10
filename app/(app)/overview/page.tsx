@@ -144,7 +144,7 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
         <Link href="/students?batch=none" className="rounded-lg border border-line p-3 hover:border-brand-300"><div className="text-2xl font-semibold tabular-nums">{noBatch}</div><div className="text-xs text-muted">students without a batch</div></Link>
         <Link href="/students?mentor=none" className="rounded-lg border border-line p-3 hover:border-brand-300"><div className="text-2xl font-semibold tabular-nums">{noMentor}</div><div className="text-xs text-muted">students without a mentor</div></Link>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2"><Link href="/students/import" className="btn-outline"><Upload className="size-4" />Bulk import students</Link><Link href="/users" className="btn-outline"><UserPlus className="size-4" />Manage accounts</Link></div>
+      <div className="mt-4 flex flex-wrap gap-2"><Link href="/attendance/register" className="btn-primary"><CalendarClock className="size-4" />Post today&apos;s attendance</Link><Link href="/students/import" className="btn-outline"><Upload className="size-4" />Bulk import students</Link><Link href="/users" className="btn-outline"><UserPlus className="size-4" />Manage accounts</Link></div>
     </Card>
   )
 }

@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ExternalLink, Trash2 } from 'lucide-react'
 import { can, requirePage } from '@/lib/auth'
 import { visibleBatches } from '@/lib/scope'
@@ -22,6 +22,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const s = await TrainingSession.findById(id).lean()
   const scope = await visibleBatches(me)
   if (!s || (scope && !scope.some(b => String(b) === String(s.batch)))) notFound()
+  if (s.register) redirect(`/attendance/register?day=${new Date(s.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}`)
   const [batch, trainer, students, marks, bOpts, tOpts] = await Promise.all([
     Batch.findById(s.batch).lean(),
     s.trainer ? User.findById(s.trainer).select('name').lean() : null,

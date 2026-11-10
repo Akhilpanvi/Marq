@@ -65,7 +65,7 @@ npm test             # scoring unit checks
 npx next build && npm run test:e2e
 ```
 
-`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (28 checks: account invitations, bulk import, attendance corrections, marks, scoring, mentor/trainer scoping, student isolation, applications and timelines, finance approval, director read-only, exports, audit, custom roles, session revocation, lockout, cron auth, dark mode, coding profiles and leaderboards, targets). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
+`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (30 checks: account invitations, bulk import, attendance corrections, marks, scoring, mentor/trainer scoping, student isolation, applications and timelines, finance approval, director read-only, exports, audit, custom roles, session revocation, lockout, cron auth, dark mode, coding profiles and leaderboards, targets, daily register with Director-approved changes). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
 
 ## Deployment (Vercel)
 

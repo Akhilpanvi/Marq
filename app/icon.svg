@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<style>.t{fill:#0b0d12}.q{fill:#3CC9B5}.s{stroke:#F0646C}</style>
-<rect class="t" width="64" height="64" rx="14"/>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1e27"/><stop offset="1" stop-color="#0b0d12"/></linearGradient>
+<linearGradient id="q" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#62dcc8"/><stop offset="1" stop-color="#22a893"/></linearGradient>
+<linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f58a90"/><stop offset="1" stop-color="#d9444e"/></linearGradient>
+</defs>
+<rect width="64" height="64" rx="14" fill="url(#bg)"/>
 <g transform="translate(9 9) scale(.4)">
-<path class="q" fill-rule="evenodd" d="M50 0 A50 50 0 1 1 49.99 0 Z M50 18 A32 32 0 1 0 50.01 18 Z"/>
-<line class="s" x1="62" y1="62" x2="102" y2="102" stroke-width="18"/>
+<path fill="url(#q)" fill-rule="evenodd" d="M50 0 A50 50 0 1 1 49.99 0 Z M50 18 A32 32 0 1 0 50.01 18 Z"/>
+<line x1="62" y1="62" x2="102" y2="102" stroke="url(#t)" stroke-width="18"/>
 </g>
 </svg>
