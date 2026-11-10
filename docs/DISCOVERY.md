@@ -27,13 +27,24 @@
 
 Public surface: Smart Coder (16–18 weeks; programming basics → DSA → DP/graphs), Coding 101, "The Hive" practice platform (hive.smartinterviews.in), Contest Leaderboard and Leaderboard, placements showcase, interview experiences, resume builder, completion certificates, campus connect.
 
+### Observed after login (from a screenshot of a student profile page, 11 Nov 2026)
+
+`/profile/<username>` shows:
+- **Identity card** with a public/private visibility toggle, an **Overall Score** (practice-based points) and a **Global Rank** across all Smart Interviews users.
+- **Global Rankings chart**: the student's rank over time (inverted axis). Rank moves daily, and a sharp drop shows when the global pool changes.
+- **Recent Education** (degree and institution).
+- **CodeChef Ratings**: current rating, highest rating, total contests and last rating change, with a small rating-history chart. These are pulled from the external platform.
+- **Score Distribution**: a sunburst chart breaking the score down by topic and difficulty.
+
+Implication for MARQ: MARQ ranks students per assessment, but it has no **cohort rank that changes over time**, no **practice-points score**, no **external coding-platform ratings**, and no **topic × difficulty breakdown**. These become items 1–3 in the opportunities below.
+
 ### Gap analysis
 
 | Category | Item |
 |---|---|
 | **Already in MARQ** | Batches & training sessions with topics; attendance; assessments with rankings; performance analytics; mentor evaluations; placement tracking; notifications; reports; user/role management |
 | **In Smart Interviews, missing in MARQ** | Hosted coding practice and question bank; online test engine (MARQ records results from tests run elsewhere); programme-wide leaderboard and contests; completion certificates; structured curriculum modules |
-| **Opportunities worth building next** | 1) Sync coding profiles (reuse KLOOP's platform adapters) into the Coding dimension. 2) Cohort leaderboard page (overall, coding, improvement). 3) Interview-experience library fed by completed interviews' feedback. 4) Certificate generation on programme completion. 5) Curriculum module tracking on top of session topics. |
+| **Opportunities worth building next** | 1) Sync external coding profiles (CodeChef/LeetCode/Codeforces ratings and history, reusing KLOOP's adapters) into the Coding dimension and the Student 360. 2) Cohort leaderboard with **rank history over time** (overall, coding, improvement), shown on each student's dashboard. 3) Topic × difficulty breakdown of assessment performance (sunburst or heatmap). 4) Interview-experience library fed by completed interviews' feedback. 5) Certificates on programme completion. 6) Curriculum module tracking on top of session topics. |
 
 Re-run this section after an authenticated walkthrough to confirm the admin-side modules (batch management, test management, user administration) and refine the list.
 
