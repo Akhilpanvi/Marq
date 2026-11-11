@@ -16,6 +16,7 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.1.0",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.47.0",
     "mongoose": "^9.10.1",
