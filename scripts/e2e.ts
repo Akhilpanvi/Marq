@@ -85,10 +85,13 @@ try {
   }
 
   await step('Super Admin creates one account per role and each activates via one-time link', async () => {
-    for (const [role, email] of Object.entries(staff)) {
+    // Administrator, Admin Assistant and Placement Administrator are now one role: Placement Admin
+    const ROLE: Record<string, string> = { 'Admin Assistant': 'Placement Admin', 'Placement Administrator': 'Placement Admin', Administrator: 'Placement Admin' }
+    for (const [label, email] of Object.entries(staff)) {
+      const role = ROLE[label] ?? label
       await sa.goto('/users')
       const d = await open(sa, /New account/)
-      await d.locator('input[name=name]').fill(`${role} User`)
+      await d.locator('input[name=name]').fill(`${label} User`)
       await d.locator('input[name=email]').fill(email)
       await d.locator('select[name=type]').selectOption(role === 'Mentor' ? 'mentor' : role === 'Trainer' ? 'trainer' : 'administrative')
       await d.locator('select[name=role]').selectOption({ label: role })
@@ -456,14 +459,15 @@ try {
     await pa.getByText('Students with offers').waitFor()
   })
 
-  await step('Director: executive overview, read-only, no finance or user management', async () => {
+  await step('Director: executive overview with full access to every module', async () => {
     const dir = await login(staff.Director)
     await dir.getByRole('heading', { name: 'Executive Overview' }).waitFor()
     await dir.goto('/students')
-    assert.equal(await dir.getByRole('button', { name: /Add student/ }).count(), 0)
-    for (const path of ['/users', '/audit']) {
-      await dir.goto(path)
-      await dir.waitForURL('**/denied')
+    await dir.getByRole('button', { name: /Add student/ }).waitFor()
+    for (const path of ['/users', '/audit', '/roles', '/settings', '/inbox']) {
+      const r = await dir.goto(path)
+      assert.equal(r?.status(), 200, path)
+      assert.ok(!dir.url().endsWith('/denied'), path)
     }
     assert.equal((await dir.request.get('/api/reports/performance?format=xlsx')).status(), 200)
     await dir.context().close()

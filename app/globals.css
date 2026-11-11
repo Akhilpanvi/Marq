@@ -70,7 +70,7 @@
 body { @apply bg-bg text-fg antialiased; }
 
 @utility card { @apply rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.04)]; }
-@utility input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg shadow-xs outline-none transition placeholder:text-muted focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 disabled:opacity-60; }
+@utility input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-fg sm:text-sm shadow-xs outline-none transition placeholder:text-muted focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 disabled:opacity-60; }
 @utility btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition disabled:opacity-60 cursor-pointer disabled:cursor-default; }
 @utility btn-primary { @apply btn bg-brand-600 text-white shadow-xs hover:bg-brand-700; }
 @utility btn-outline { @apply btn border border-line bg-surface text-fg shadow-xs hover:bg-subtle; }
@@ -90,6 +90,16 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45); }
   .card { box-shadow: none; break-inside: avoid; }
 }
 
-/* phone nav strip: scroll without a visible scrollbar */
-nav.overflow-x-auto, nav .overflow-x-auto { scrollbar-width: none; }
-nav.overflow-x-auto::-webkit-scrollbar { display: none; }
+/* Phones: data tables become stacked cards — first cell is the title, the rest are "label … value" lines. */
+@media (max-width: 639px) {
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody, table.stack tr { display: block; width: 100%; }
+  table.stack tr { padding: 0.75rem 1rem; }
+  table.stack td { display: block; padding: 0.25rem 0; text-align: right; overflow: hidden; }
+  table.stack td::before { content: attr(data-label); float: left; margin-right: 0.75rem; padding-top: 0.1rem; color: var(--color-muted); font-size: 0.75rem; font-weight: 500; text-align: left; }
+  table.stack td:not([data-label])::before, table.stack td[data-label=""]::before { content: none; }
+  table.stack td:first-child { text-align: left; font-size: 0.95rem; padding-bottom: 0.4rem; }
+  table.stack td > .flex.justify-end { justify-content: flex-start; }
+  table.stack td:first-child::before { content: none; }
+  table.stack td:empty { display: none; }
+}

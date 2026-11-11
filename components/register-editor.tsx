@@ -87,10 +87,10 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[900px] text-sm">
+        <table className="w-full text-sm md:min-w-[900px]">
           <thead className="border-b border-line">
             <tr className="bg-subtle/70">
-              {['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name'].map(h => <th key={h} rowSpan={2} className="th border-r border-line">{h}</th>)}
+              {['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name'].map((h, i) => <th key={h} rowSpan={2} className={`th border-r border-line ${i === 0 || i === 2 || i === 3 ? 'hidden md:table-cell' : ''}`}>{h}</th>)}
               {cols.map((c, i) => <th key={i} className="th text-center">{c.kind === 'period' ? c.p.no : ''}</th>)}
               <th rowSpan={2} className="th text-center">Row</th>
             </tr>
@@ -101,10 +101,10 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
               const ab = new Set(absent[s.id] ?? [])
               return (
                 <tr key={s.id}>
-                  <td className="td tabular-nums text-muted">{students.indexOf(s) + 1}</td>
+                  <td className="td hidden tabular-nums text-muted md:table-cell">{students.indexOf(s) + 1}</td>
                   <td className="td font-mono text-xs">{s.regNo}</td>
-                  <td className="td">{s.department}</td>
-                  <td className="td">{s.specialization}</td>
+                  <td className="td hidden md:table-cell">{s.department}</td>
+                  <td className="td hidden md:table-cell">{s.specialization}</td>
                   <td className="td">{s.name}</td>
                   {cols.map((c, i) => c.kind === 'break' ? <td key={i} className="td text-center text-xs text-muted">Lunch Break</td> : (
                     <td key={i} className="td p-1 text-center">

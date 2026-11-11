@@ -1,3 +1,4 @@
+import { Children, cloneElement, isValidElement } from 'react'
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { initials } from '@/lib/format'
@@ -112,15 +113,27 @@ export function Field({ label, children, hint, className = '' }: { label: string
   )
 }
 
+/** Label every cell with its column heading so phones can show rows as stacked cards (see .stack in globals.css). */
+function labelCells(children: React.ReactNode, head: React.ReactNode[]) {
+  return Children.map(children, tr => {
+    if (!isValidElement<{ children?: React.ReactNode }>(tr)) return tr
+    let i = 0
+    return cloneElement(tr, {}, Children.map(tr.props.children, td => {
+      const label = head[i++]
+      return isValidElement(td) && typeof label === 'string' ? cloneElement(td as React.ReactElement<{ 'data-label'?: string }>, { 'data-label': label }) : td
+    }))
+  })
+}
+
 export function Table({ head, children, empty }: { head: React.ReactNode[]; children: React.ReactNode; empty?: React.ReactNode }) {
   const rows = Array.isArray(children) ? children.flat().filter(Boolean) : children ? [children] : []
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="stack w-full text-sm">
         <thead className="border-b border-line bg-subtle/60">
           <tr>{head.map((h, i) => <th key={i} className="th">{h}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-line">{children}</tbody>
+        <tbody className="divide-y divide-line">{labelCells(children, head)}</tbody>
       </table>
       {rows.length === 0 && <div className="p-4">{empty ?? <Empty>Nothing here yet.</Empty>}</div>}
     </div>

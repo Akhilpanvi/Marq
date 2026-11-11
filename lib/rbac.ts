@@ -39,24 +39,17 @@ const view = (...ms: Module[]) => ms.map(m => `${m}.view` as Perm)
 export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 'student'; perms: Perm[]; description: string }[] = [
   { key: 'superadmin', name: 'Super Administrator', scope: 'all', perms: ['*'], description: 'Complete platform control.' },
   {
-    key: 'admin', name: 'Administrator', scope: 'all', description: 'Student information, operations and authorized reports.',
-    perms: [...all('students'), ...all('announcements'), ...all('feedback', 'view', 'edit'), ...view('users', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews'), ...all('reports', 'view', 'export')],
+    key: 'placement_admin', name: 'Placement Admin', scope: 'all', description: 'Runs the programme day to day: students, accounts, daily register, companies, drives, applications, interviews, announcements and feedback.',
+    perms: [
+      ...all('students'), ...all('users', 'view', 'create', 'edit'), ...all('attendance', 'view', 'create'), ...all('announcements'), ...all('feedback', 'view', 'edit'),
+      ...all('companies'), ...all('jobs'), ...all('applications'), ...all('interviews'), ...all('reports', 'view', 'export'),
+      ...view('training', 'assessments', 'performance', 'mentorship'),
+    ],
   },
-  {
-    key: 'admin_assistant', name: 'Admin Assistant', scope: 'all', description: 'Student records, onboarding, bulk uploads and student accounts.',
-    perms: [...all('students', 'view', 'create', 'edit', 'export'), ...all('users', 'view', 'create', 'edit'), ...all('reports', 'view', 'export'), ...all('attendance', 'view', 'create'), 'training.view'],
-  },
-  {
-    key: 'director', name: 'Director', scope: 'all', description: 'Executive read-only view of the whole programme.',
-    perms: [...view('students', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews', 'announcements'), ...all('reports', 'view', 'export'), 'attendance.approve'],
-  },
+  { key: 'director', name: 'Director', scope: 'all', description: 'Full access to the whole programme; approves attendance changes.', perms: [...ALL_PERMS] },
   {
     key: 'training_admin', name: 'Training Administrator', scope: 'all', description: 'Schedules, attendance, trainer allocation and assessments.',
     perms: [...all('training'), ...all('attendance'), ...all('assessments'), ...view('students', 'performance', 'mentorship', 'users'), ...all('reports', 'view', 'export'), ...all('announcements', 'view', 'create')],
-  },
-  {
-    key: 'placement_admin', name: 'Placement Administrator', scope: 'all', description: 'Companies, opportunities, applications and interviews.',
-    perms: [...all('companies'), ...all('jobs'), ...all('applications'), ...all('interviews'), ...view('students', 'performance'), ...all('reports', 'view', 'export'), ...all('announcements', 'view', 'create')],
   },
   {
     key: 'mentor', name: 'Mentor', scope: 'assigned', description: 'Assigned students: evaluations, feedback and progress.',

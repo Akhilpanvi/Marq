@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 import { db } from '../lib/db'
 import { hashPassword, passwordIssue } from '../lib/password'
 import { DEFAULT_ROLES } from '../lib/rbac'
-import { Role, User } from '../models'
+import { Role, Setting, User } from '../models'
 
 export async function seedRoles() {
   for (const r of DEFAULT_ROLES)
@@ -16,6 +16,7 @@ export async function seedRoles() {
     )
   // superadmin always keeps full control, even if someone edited it
   await Role.updateOne({ key: 'superadmin' }, { $set: { perms: ['*'] } })
+  await migrate()
   // permissions added to built-in roles after first release (idempotent)
   for (const [key, perms] of Object.entries(ADDED_PERMS)) await Role.updateOne({ key }, { $addToSet: { perms: { $each: perms } } })
   // Finance module removed (Nov 2026): drop its permissions and the Director Accounts role if nobody holds it
@@ -26,10 +27,39 @@ export async function seedRoles() {
 }
 
 /** Daily register (Nov 2026): assistants post attendance, the Director approves changes. */
-const ADDED_PERMS: Record<string, string[]> = {
-  admin_assistant: ['attendance.view', 'attendance.create'],
-  director: ['attendance.approve'],
-  admin: ['feedback.view', 'feedback.edit'],
+const ADDED_PERMS: Record<string, string[]> = {}
+
+/** One-time data migrations, recorded in Settings so they never run twice (later edits in Roles are kept). */
+const MIGRATIONS: { id: string; run: () => Promise<void> }[] = [
+  {
+    // Administrator, Admin Assistant and Placement Administrator become one role: Placement Admin
+    id: '2026-11-merge-placement-admin',
+    run: async () => {
+      const def = DEFAULT_ROLES.find(r => r.key === 'placement_admin')!
+      const target = await Role.findOneAndUpdate({ key: 'placement_admin' }, { $set: { name: def.name, description: def.description, perms: def.perms, scope: 'all', system: true } }, { upsert: true, returnDocument: 'after' })
+      const old = await Role.find({ key: { $in: ['admin', 'admin_assistant'] } }).select('_id').lean()
+      await User.updateMany({ role: { $in: old.map(r => r._id) } }, { $set: { role: target!._id }, $inc: { sessionVersion: 1 } })
+      await Role.deleteMany({ _id: { $in: old.map(r => r._id) } })
+      await User.updateMany({ role: target!._id }, { $inc: { sessionVersion: 1 } })
+    },
+  },
+  {
+    id: '2026-11-director-full-access',
+    run: async () => {
+      const def = DEFAULT_ROLES.find(r => r.key === 'director')!
+      const d = await Role.findOneAndUpdate({ key: 'director' }, { $set: { perms: def.perms, description: def.description } }, { returnDocument: 'after' })
+      if (d) await User.updateMany({ role: d._id }, { $inc: { sessionVersion: 1 } })
+    },
+  },
+]
+
+async function migrate() {
+  for (const m of MIGRATIONS) {
+    if (await Setting.exists({ key: `migration:${m.id}` })) continue
+    await m.run()
+    await Setting.create({ key: `migration:${m.id}`, value: new Date() })
+    console.log(`Migration applied: ${m.id}`)
+  }
 }
 
 async function main() {

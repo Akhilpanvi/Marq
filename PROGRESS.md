@@ -47,7 +47,7 @@ _Last updated: 11 Nov 2026_
 
 ## Known issues / limitations
 
-- **Production data steps (one-off):** run `npm run seed` against production (adds Admin Assistant: Create Attendance, Director: Approve Attendance, Administrator: Feedback; removes finance permissions and the unused Director Accounts role), and `npx tsx scripts/seed-drives.ts` to load the 12 company drives.
+- **Production data steps (one-off):** run `npm run seed` against production (applies the one-time role migrations: Administrator + Admin Assistant + Placement Administrator merged into Placement Admin, Director given full access; removes finance permissions and the unused Director Accounts role), and `npx tsx scripts/seed-drives.ts` to load the 12 company drives.
 - **Self-registration email** requires `marq.klef.me` verified in Resend; until then registration stops with a clear message (links are never shown on screen).
 
 - Learning materials and application documents are stored as **links** (Drive/LMS), not file uploads — no blob storage is configured. Profile photos are stored in MongoDB (≤300 KB).
