@@ -102,6 +102,8 @@ export async function clientIp() {
 
 export async function audit(me: Pick<Me, '_id' | 'name'> | null, module: string, action: string, target?: unknown, before?: unknown, after?: unknown) {
   await AuditLog.create({ actor: me?._id, actorName: me?.name ?? 'system', module, action, target: target == null ? undefined : String(target), before, after, ip: await clientIp() })
+  // one line per audited action so activity shows in Vercel runtime logs (ids only — no names, emails or values)
+  console.info(JSON.stringify({ event: action, module, target: target == null ? undefined : String(target), actor: me?._id ? String(me._id) : 'system' }))
 }
 
 /** Fixed-window limiter stored in Mongo so it holds across serverless instances. */
