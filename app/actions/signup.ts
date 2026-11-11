@@ -1,5 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { audit, clientIp, rateLimit, requireStudent } from '@/lib/auth'
 import { attempt, EMAIL, Invalid, link, list, str, type State } from '@/lib/form'
 import { db } from '@/lib/db'
@@ -71,6 +72,7 @@ export async function onboardCoding(_: State, fd: FormData): Promise<State> {
     if (notFound.length) throw new Invalid(`These accounts don’t exist: ${notFound.join(', ')}. Check the usernames.`)
     await snapshotToday().catch(() => {})
     await audit(me, 'students', 'onboarding.coding', me.student)
+    revalidatePath('/onboarding') // re-render so step 3 (profile) opens straight away
     return { ok: 'Coding profiles verified.' }
   })
 }

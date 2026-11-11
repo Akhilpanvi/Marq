@@ -318,7 +318,7 @@ try {
     await s1.fill('input[name=codechef]', 'gennady.korotkevich')
     await s1.getByRole('button', { name: 'Verify & continue' }).click()
     await toast(s1, 'Coding profiles verified')
-    await s1.reload()
+    await s1.locator('input[name=phone]').waitFor({ timeout: 10_000 }) // step 3 opens without a refresh
     await s1.fill('input[name=phone]', '9876543210')
     await s1.fill('input[name=personalEmail]', 'asha.personal@example.com')
     await s1.fill('input[name=headline]', 'Aspiring backend engineer')
