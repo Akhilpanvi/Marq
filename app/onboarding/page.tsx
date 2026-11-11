@@ -59,7 +59,7 @@ export default async function Onboarding() {
           <ActionForm action={onboardProfile} className="mt-4 space-y-4" submit="Finish & open MARQ" reset={false}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Mobile number *"><input name="phone" type="tel" required defaultValue={s.phone ?? ''} className="input" /></Field>
-              <Field label="Placement mail ID *"><input name="personalEmail" type="email" required defaultValue={s.personalEmail ?? ''} className="input" /></Field>
+              <Field label="Placement mail ID *" hint="The email you use to register for company drives — not your university email."><input name="personalEmail" type="email" required defaultValue={s.personalEmail ?? ''} className="input" /></Field>
               <Field label="Headline *" className="sm:col-span-2"><input name="headline" required maxLength={140} defaultValue={s.professional?.headline ?? ''} placeholder="Aspiring backend engineer · Java, Spring, SQL" className="input" /></Field>
               <Field label="LinkedIn *"><input name="linkedin" type="url" required defaultValue={s.professional?.linkedin ?? ''} placeholder="https://linkedin.com/in/…" className="input" /></Field>
               <Field label="Resume link *"><input name="resume" type="url" required defaultValue={s.professional?.resume ?? ''} placeholder="https://drive.google.com/…" className="input" /></Field>

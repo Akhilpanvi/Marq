@@ -25,7 +25,7 @@ export default async function MyProfile() {
         <Card title="Contact details">
           <ActionForm action={updateMyProfile} submit="Save" reset={false}>
             <Field label="Mobile number"><input name="phone" type="tel" defaultValue={s.phone ?? ''} className="input" /></Field>
-            <Field label="Placement mail ID"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
+            <Field label="Placement mail ID" hint="The email you use to register for company drives."><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
             <Field label="Profile picture link" hint="Google Drive share link (Anyone with the link can view). Leave blank to use the GitHub profile picture."><input name="photoUrl" type="url" placeholder="https://drive.google.com/file/d/…/view" defaultValue={s.photoUrl ?? ''} className="input" /></Field>
           </ActionForm>
         </Card>

@@ -6,9 +6,8 @@ import { escapeRe } from '@/components/list'
 import { Application, Company, Job } from '@/models'
 import { Badge, Card, Empty, PageHeader } from '@/components/ui'
 import { Filters, Select, sp } from '@/components/list'
-import { ActionButton, ActionForm } from '@/components/form'
-import { applyToJob, setDriveStatus } from '@/app/actions/placement'
-import { DRIVE_OPTIONS, driveLabel } from '@/lib/placement'
+import { DriveStatus } from '@/components/drive-status'
+import { driveLabel } from '@/lib/placement'
 
 export const metadata = { title: 'Job Opportunities' }
 
@@ -27,8 +26,8 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   const unanswered = jobs.filter(j => !applied.has(String(j._id))).length
   return (
     <>
-      <PageHeader title="Job Opportunities" description="Drives published by the placement team. Apply here, and keep “Status of the candidate” updated for every drive — it feeds the programme's placement analysis." />
-      {unanswered > 0 && <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Choose an option on each card below — “Not applied” counts as an answer.</div>}
+      <PageHeader title="Job Opportunities" description="Drives published by the placement team. For every drive, answer two quick questions — did you apply, and how far have you reached. Update it whenever something changes; it feeds the programme's placement analysis." />
+      {unanswered > 0 && <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Answer “Did you apply?” on each card below — “No” counts as an answer.</div>}
       <Card pad={false} className="mb-6">
         <Filters params={params} placeholder="Search role, skill or location">
           <Select name="company" value={company} options={companies} all="All companies" />
@@ -56,21 +55,8 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
               {j.skills.length > 0 && <p className="mt-2 text-xs text-muted">Skills: {j.skills.join(', ')}</p>}
               {j.eligibility && <p className="mt-1 text-xs text-muted">Eligibility: {j.eligibility}</p>}
               {j.process && <p className="mt-1 text-xs text-muted">Process: {j.process}</p>}
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                {status && <Badge tone="blue">Status: {driveLabel(status) ?? status}</Badge>}
-                {!status && !closed && <ActionButton action={applyToJob} fields={{ job: String(j._id) }} className="btn-primary" confirm={`Apply to ${c?.name} — ${j.role}?`}>Apply</ActionButton>}
-                {j.link && <a href={j.link} target="_blank" rel="noopener noreferrer" className="btn-ghost"><ExternalLink className="size-4" />Company link</a>}
-              </div>
-              <ActionForm action={setDriveStatus} reset={false} className="mt-4 space-y-2 rounded-lg border border-line bg-subtle/40 p-3">
-                <input type="hidden" name="job" value={String(j._id)} />
-                <label className="block text-xs font-medium">Status of the candidate for this drive {!status && <span className="text-red-600">· not answered</span>}
-                  <select name="status" required defaultValue={DRIVE_OPTIONS.some(([, v]) => v === status) ? status : ''} className="input mt-1">
-                    <option value="" disabled>Choose…</option>
-                    {DRIVE_OPTIONS.map(([label, v]) => <option key={v} value={v}>{label}</option>)}
-                  </select>
-                </label>
-                <div className="flex gap-2"><input name="remarks" placeholder="Remarks (optional)" maxLength={500} className="input" /><button className="btn-outline">Save</button></div>
-              </ActionForm>
+              {j.link && <div className="mt-3"><a href={j.link} target="_blank" rel="noopener noreferrer" className="btn-ghost -ml-2"><ExternalLink className="size-4" />Apply on the company site</a></div>}
+              <DriveStatus job={String(j._id)} status={status} formLabel={driveLabel(status)} />
             </Card>
           )
         })}

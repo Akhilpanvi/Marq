@@ -19,7 +19,7 @@ async function scopedStudents(me: Me, p: URLSearchParams) {
   const f: Record<string, unknown> = ids ? { _id: { $in: ids } } : {}
   const batch = p.get('batch')
   if (batch && Types.ObjectId.isValid(batch)) f.batch = batch
-  const students = await Student.find(f).select('regNo name email department section year batch mentor status').sort({ regNo: 1 }).lean()
+  const students = await Student.find(f).select('regNo name email personalEmail phone department specialization section year batch mentor status onboardedAt').sort({ regNo: 1 }).lean()
   const [batches, mentors] = await Promise.all([Batch.find().select('name').lean(), User.find({ _id: { $in: students.flatMap(s => (s.mentor ? [s.mentor] : [])) } }).select('name').lean()])
   return { students, ids: students.map(s => s._id), bName: new Map(batches.map(b => [String(b._id), b.name])), mName: new Map(mentors.map(m => [String(m._id), m.name])) }
 }
@@ -29,7 +29,7 @@ export const REPORTS: Record<string, Def> = {
     title: 'Student roster', description: 'Personal, academic and cohort details.', perm: 'students.view',
     build: async (me, p) => {
       const { students, bName, mName } = await scopedStudents(me, p)
-      return { title: 'Student roster', columns: ['Registration No', 'Name', 'University Email', 'Department', 'Year', 'Section', 'Batch', 'Mentor', 'Status'], rows: students.map(s => [s.regNo, s.name, s.email, s.department ?? '', s.year ?? '', s.section ?? '', bName.get(String(s.batch)) ?? '', mName.get(String(s.mentor)) ?? '', s.status ?? '']) }
+      return { title: 'Student roster', columns: ['Registration No', 'Name', 'University Email', 'Placement Mail ID', 'Mobile', 'Department', 'Specialization', 'Year', 'Section', 'Batch', 'Mentor', 'Status', 'Registered'], rows: students.map(s => [s.regNo, s.name, s.email, s.personalEmail ?? '', s.phone ?? '', s.department ?? '', s.specialization ?? '', s.year ?? '', s.section ?? '', bName.get(String(s.batch)) ?? '', mName.get(String(s.mentor)) ?? '', s.status ?? '', s.onboardedAt ? 'Yes' : 'No']) }
     },
   },
   performance: {
