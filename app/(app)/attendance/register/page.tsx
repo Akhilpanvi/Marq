@@ -9,7 +9,7 @@ import { Badge, Card, Empty, Field, PageHeader, Table } from '@/components/ui'
 import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { RegisterEditor } from '@/components/register-editor'
 import { RegisterBulk } from '@/components/register-bulk'
-import { decideChange, requestChange } from '@/app/actions/register'
+import { decideChange, markExcused, requestChange } from '@/app/actions/register'
 
 export const metadata = { title: 'Daily Register' }
 const DAY = /^\d{4}-\d{2}-\d{2}$/
@@ -103,6 +103,20 @@ async function Locked({ day, reg, meId, canPost, canApprove, superadmin, scope }
               </ActionForm>
             </Modal>
           )}
+          {canApprove && (
+            <Modal label="Mark excused" title={`Mark excused · ${day.split('-').reverse().join('.')}`} className="btn-outline py-1.5">
+              <p className="mb-3 text-sm text-muted">Director only. Turns a student’s <b>absent</b> periods into <b>E — excused</b> (on duty, medical…). Excused periods are left out of the attendance percentage. Applied immediately and kept in the history.</p>
+              <ActionForm action={markExcused} submit="Apply">
+                <input type="hidden" name="day" value={day} />
+                <Field label="Student"><select name="student" required className="input"><option value="">Choose…</option>{data.students.map(s => <option key={String(s._id)} value={String(s._id)}>{s.regNo} · {s.name}</option>)}</select></Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Period"><select name="period" required className="input"><option value="all">All absent periods</option>{reg.periods.map(p => <option key={p.no} value={p.no}>{p.no} · {span(p)}</option>)}</select></Field>
+                  <Field label="Mark as"><select name="to" className="input"><option value="excused">Excused (E)</option><option value="absent">Undo — back to absent</option></select></Field>
+                </div>
+                <Field label="Reason"><input name="reason" required minLength={3} placeholder="On duty — hackathon / Medical leave" className="input" /></Field>
+              </ActionForm>
+            </Modal>
+          )}
         </div>
       </div>
 
@@ -139,7 +153,7 @@ async function Locked({ day, reg, meId, canPost, canApprove, superadmin, scope }
           <tbody className="divide-y divide-line">
             {body.map(r => (
               <tr key={r[1]}>
-                {r.map((v, i) => <td key={i} className={`td ${i >= STUDENT_COLS.length ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
+                {r.map((v, i) => <td key={i} className={`td ${i >= STUDENT_COLS.length ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : v === 'E' ? 'bg-zinc-500/15 font-semibold text-muted' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
               </tr>
             ))}
           </tbody>

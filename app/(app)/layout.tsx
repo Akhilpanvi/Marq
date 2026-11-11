@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
 import { onboardingState } from '@/lib/onboarding'
 import { logout } from '@/app/actions/auth'
+import { exitPreview, resetDemo } from '@/app/actions/preview'
 import { Avatar } from '@/components/ui'
 import { Nav } from '@/components/nav'
 import { Sidebar } from '@/components/sidebar'
@@ -59,6 +60,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Nav perms={me.perms} student={!!me.student} assigned={me.scope === 'assigned' && !me.student} unread={unread} />
       </Sidebar>
       <div className="flex min-w-0 flex-col">
+        {me.preview && (
+          <div className="no-print flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm sm:px-6 lg:px-8">
+            <span><b>Student view (demo)</b> — you are seeing MARQ as a student. This demo student is not counted anywhere.</span>
+            <span className="ml-auto flex gap-2">
+              <form action={resetDemo}><button className="btn-ghost py-1 text-xs">Reset demo</button></form>
+              <form action={exitPreview}><button className="btn-primary py-1 text-xs">Exit preview</button></form>
+            </span>
+          </div>
+        )}
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
         <footer className="no-print border-t border-line px-6 py-4 text-center text-xs text-muted">
           MARQ · Marquee Achievement &amp; Readiness Quotient — Koneru Lakshmaiah Education Foundation (KL University)

@@ -39,6 +39,10 @@ _Last updated: 11 Nov 2026_
 | 23g | Staff sign-in usernames; password change from the sign-in page | Done | e2e |
 | 23h | Multi-file attendance upload (date read per file; posted/future/duplicate dates refused; one Verify for all days) | Done | e2e: 3 files, 2 saved, posted day skipped |
 | 23i | Student bulk import understands the Top Notch roster (Student ID NO, Parent Branch, Branch), defaults email to regno@kluniversity.in, sample file with example rows | Done | e2e |
+| 23j | Overview ordered by programme priority: 1 Placement, 2 Coding scores, 3 Attendance, then overall performance | Done | e2e render |
+| 23k | Excused (E): Director-only, on a posted day, absent periods only, with reason + history; excluded from the percentage; E in uploads is read as absent | Done | e2e |
+| 23l | Super Admin “Student View (demo)”: browse the student portal as a demo student hidden from every list, register, report, leaderboard and count; reset + exit | Done | e2e |
+| 23m | Placement Mail ID in every student download; day-wise attendance tiles replace monthly charts | Done | e2e |
 | 24 | Deployment config (vercel.json, env, cron, health, docs) | Done | live at https://marq.klef.me; GitHub → Vercel auto-deploy |
 
 ## Pending / next
@@ -62,7 +66,7 @@ _Last updated: 11 Nov 2026_
 ## Testing status
 
 - `npm test` — scoring unit checks: pass.
-- `npm run test:e2e` — 37 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npm run test:e2e` — 38 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
 - `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Architectural decisions

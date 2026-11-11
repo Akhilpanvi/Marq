@@ -2,10 +2,50 @@ import mongoose, { Schema, type InferSchemaType, type Model, type Types } from '
 
 const { ObjectId, Mixed } = Schema.Types
 type Doc<S extends Schema> = InferSchemaType<S> & { _id: Types.ObjectId; createdAt: Date; updatedAt: Date }
-function model<S extends Schema>(name: string, schema: S) {
+function model<S extends Schema>(name: string, schema: S, hide?: 'self' | 'student') {
+  if (hide && !mongoose.models[name]) hideDemo(schema, hide)
   return (mongoose.models[name] as Model<Doc<S>>) || mongoose.model<Doc<S>>(name, schema)
 }
 const ts = { timestamps: true }
+
+/* ───────────── Demo student (Super Admin preview) ─────────────
+   One student + login flagged demo: true. Every read that is not about a specific record (_id / student / demo
+   in the filter) leaves it out, so the demo never appears in lists, registers, reports, leaderboards or counts. */
+
+type F = Record<string, unknown> | null | undefined
+const mentions = (f: F, keys: string[]): boolean =>
+  !!f && typeof f === 'object' && (keys.some(k => k in f) || ['$and', '$or'].some(op => Array.isArray(f[op]) && (f[op] as F[]).some(x => mentions(x, keys))))
+
+let demoCache: { at: number; student?: Types.ObjectId } | null = null
+export const clearDemoCache = () => { demoCache = null }
+async function demoStudentId() {
+  if (!demoCache || Date.now() - demoCache.at > 60_000) {
+    const d = await mongoose.connection.collection('students').findOne({ demo: true }, { projection: { _id: 1 } })
+    demoCache = { at: Date.now(), student: d?._id as Types.ObjectId | undefined }
+  }
+  return demoCache.student
+}
+
+const READS = ['find', 'findOne', 'countDocuments', 'distinct'] as const
+type Q = mongoose.Query<unknown, unknown>
+type A = mongoose.Aggregate<unknown>
+const firstMatch = (agg: A) => (agg.pipeline()[0] as { $match?: F } | undefined)?.$match
+function hideDemo(schema: Schema, hide: 'self' | 'student') {
+  for (const op of READS) {
+    if (hide === 'self') schema.pre(op, function (this: Q) { if (!mentions(this.getFilter(), ['_id', 'demo'])) this.where({ demo: { $ne: true } }) })
+    else schema.pre(op, async function (this: Q) {
+      if (mentions(this.getFilter(), ['_id', 'student'])) return
+      const id = await demoStudentId()
+      if (id) this.where({ student: { $ne: id } })
+    })
+  }
+  if (hide === 'self') schema.pre('aggregate', function (this: A) { if (!mentions(firstMatch(this), ['_id', 'demo'])) this.pipeline().unshift({ $match: { demo: { $ne: true } } }) })
+  else schema.pre('aggregate', async function (this: A) {
+    if (mentions(firstMatch(this), ['_id', 'student'])) return
+    const id = await demoStudentId()
+    if (id) this.pipeline().unshift({ $match: { student: { $ne: id } } })
+  })
+}
 
 /* ───────────── Identity & access ───────────── */
 
@@ -38,6 +78,7 @@ const userSchema = new Schema(
     student: { type: ObjectId, ref: 'Student', index: { unique: true, sparse: true } },
     passwordHash: { type: String, select: false },
     sessionVersion: { type: Number, default: 0 },
+    demo: Boolean, // the Super Admin preview login — hidden from every list and count
     failedLogins: { type: Number, default: 0 },
     lockedUntil: Date,
     lastLoginAt: Date,
@@ -51,7 +92,7 @@ const userSchema = new Schema(
   },
   ts,
 )
-export const User = model('User', userSchema)
+export const User = model('User', userSchema, 'self')
 
 /* ───────────── Students & training ───────────── */
 
@@ -74,12 +115,13 @@ const studentSchema = new Schema(
     handles: { leetcode: String, codechef: String, codeforces: String, github: String },
     professional: { headline: String, linkedin: String, github: String, portfolio: String, resume: String, skills: [String] },
     onLeaderboard: { type: Boolean, default: true },
+    demo: Boolean, // the Super Admin preview student — hidden from every list and count
     onboardedAt: Date, // set once coding profiles + profile are complete (self-registration flow)
   },
   ts,
 )
 studentSchema.index({ name: 'text', regNo: 'text', email: 'text' })
-export const Student = model('Student', studentSchema)
+export const Student = model('Student', studentSchema, 'self')
 
 const programSchema = new Schema(
   { name: { type: String, required: true, trim: true }, description: String, startDate: Date, endDate: Date, status: { type: String, enum: ['planned', 'running', 'completed'], default: 'running' } },
@@ -154,7 +196,7 @@ const attendanceSchema = new Schema(
   ts,
 )
 attendanceSchema.index({ session: 1, student: 1 }, { unique: true })
-export const Attendance = model('Attendance', attendanceSchema)
+export const Attendance = model('Attendance', attendanceSchema, 'student')
 
 /* ───────────── Assessments & mentorship ───────────── */
 
@@ -186,7 +228,7 @@ const resultSchema = new Schema(
   ts,
 )
 resultSchema.index({ assessment: 1, student: 1 }, { unique: true })
-export const AssessmentResult = model('AssessmentResult', resultSchema)
+export const AssessmentResult = model('AssessmentResult', resultSchema, 'student')
 
 const rating = { type: Number, min: 1, max: 5 }
 const evaluationSchema = new Schema(
@@ -203,7 +245,7 @@ const evaluationSchema = new Schema(
   },
   ts,
 )
-export const Evaluation = model('Evaluation', evaluationSchema)
+export const Evaluation = model('Evaluation', evaluationSchema, 'student')
 
 /* ───────────── Coding platforms ───────────── */
 
@@ -231,13 +273,13 @@ const codingStatSchema = new Schema(
   ts,
 )
 codingStatSchema.index({ student: 1, platform: 1 }, { unique: true })
-export const CodingStat = model('CodingStat', codingStatSchema)
+export const CodingStat = model('CodingStat', codingStatSchema, 'student')
 
 // one row per student per IST day: coding points and cohort rank, for rank history
 const snapshotSchema = new Schema({ student: { type: ObjectId, ref: 'Student', required: true }, day: { type: String, required: true }, points: Number, rank: Number })
 snapshotSchema.index({ student: 1, day: 1 }, { unique: true })
 snapshotSchema.index({ day: 1 })
-export const ScoreSnapshot = model('ScoreSnapshot', snapshotSchema)
+export const ScoreSnapshot = model('ScoreSnapshot', snapshotSchema, 'student')
 
 const targetSchema = new Schema(
   { batch: { type: ObjectId, ref: 'Batch', required: true, index: true }, name: { type: String, required: true }, due: { type: Date, required: true }, points: { type: Number, required: true, min: 0 } },
@@ -291,7 +333,7 @@ const applicationSchema = new Schema(
   ts,
 )
 applicationSchema.index({ student: 1, key: 1 }, { unique: true })
-export const Application = model('Application', applicationSchema)
+export const Application = model('Application', applicationSchema, 'student')
 
 
 /* ───────────── Communication, money, audit ───────────── */

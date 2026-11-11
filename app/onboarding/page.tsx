@@ -5,6 +5,7 @@ import { requireStudent } from '@/lib/auth'
 import { onboardingState, REQUIRED_SKILLS } from '@/lib/onboarding'
 import { PLATFORMS } from '@/lib/coding-points'
 import { logout } from '@/app/actions/auth'
+import { exitPreview } from '@/app/actions/preview'
 import { onboardCoding, onboardProfile } from '@/app/actions/signup'
 import { ActionForm } from '@/components/form'
 import { Field } from '@/components/ui'
@@ -33,6 +34,12 @@ export default async function Onboarding() {
         <span className="flex items-center gap-2.5"><KlSeal className="size-8" /><MarqWordmark className="h-4 w-auto" /></span>
         <div className="flex items-center"><ThemeToggle /><form action={logout}><button className="btn-ghost px-2" aria-label="Sign out"><LogOut className="size-4" /></button></form></div>
       </header>
+      {me.preview && (
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+          <span><b>Student view (demo)</b> — this is what a newly registered student sees. Not counted anywhere.</span>
+          <form action={exitPreview} className="ml-auto"><button className="btn-primary py-1 text-xs">Exit preview</button></form>
+        </div>
+      )}
       <h1 className="font-display text-2xl font-semibold tracking-tight">Welcome, {s.name.split(' ')[0]}</h1>
       <p className="mt-1 text-sm text-muted">Two quick steps before your MARQ dashboard opens. Both are required.</p>
       <ol className="my-6 flex flex-wrap gap-x-6 gap-y-2"><Step n={1} label="Account" state="done" /><Step n={2} label="Coding profiles" state={step === 1 ? 'now' : 'done'} /><Step n={3} label="Profile" state={step === 2 ? 'now' : 'next'} /></ol>

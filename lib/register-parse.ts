@@ -53,7 +53,7 @@ export function parseRegister(rows: string[][], fileName = ''): Parsed {
   for (const { p } of cols) if (!p.start || !p.end) warnings.push(`Period ${p.no} has no time; edit it before confirming.`)
 
   const marks: Parsed['marks'] = {}
-  let blanks = 0
+  let blanks = 0, excusedSeen = 0
   for (const r of rows.slice(firstData)) {
     const id = (r[idCol] ?? '').toUpperCase()
     if (!ID.test(id) || !/\d/.test(id)) continue
@@ -62,8 +62,10 @@ export function parseRegister(rows: string[][], fileName = ''): Parsed {
       const v = (r[col] ?? '').trim().toUpperCase()
       if (v === 'A' || v === 'AB' || v === 'ABSENT' || v === '0') marks[id][p.no] = 'A'
       else if (v === 'P' || v === 'PRESENT' || v === '1') marks[id][p.no] = 'P'
+      else if (v === 'E' || v === 'EX' || v === 'EXCUSED' || v === 'OD' || v === 'ML') { marks[id][p.no] = 'A'; excusedSeen++ } // only the Director marks excused, after posting
       else blanks++ // left as present; reported so the assistant can check
     }
   }
+  if (excusedSeen) warnings.push(`${excusedSeen} E/OD mark(s) were read as absent — only the Director can mark periods excused, after the day is posted.`)
   return { day, periods: cols.map(c => c.p), marks, blanks, warnings }
 }

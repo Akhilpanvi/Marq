@@ -4,7 +4,7 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { Types } from 'mongoose'
 import { db } from './db'
-import { cookieName, MAX_AGE, sign, verify } from './session'
+import { cookieName, MAX_AGE, seal, sign, unseal, verify } from './session'
 import { hasPerm, type Perm, type Scope } from './rbac'
 import { AuditLog, Batch, RateLimit, Role, Student, User } from '@/models'
 import { Invalid } from './form'
@@ -19,7 +19,11 @@ export type Me = {
   perms: string[]
   scope: Scope
   student?: Types.ObjectId // set for student-portal users
+  preview?: { admin: string } // Super Admin viewing the portal as the demo student
 }
+
+export const previewCookie = () => `${cookieName()}-preview`
+export const PREVIEW_HOURS = 8
 
 export const currentUser = cache(async (): Promise<Me | null> => {
   const s = await verify((await cookies()).get(cookieName())?.value)
@@ -29,6 +33,18 @@ export const currentUser = cache(async (): Promise<Me | null> => {
   if (!u || u.status !== 'active' || u.sessionVersion !== s.v) return null
   const role = await Role.findById(u.role).lean()
   if (!role) return null
+  // Super Admin preview: act as the demo student (hidden from every list and count) until "Exit preview"
+  if (role.perms?.includes('*')) {
+    const pv = await unseal<{ admin: string }>((await cookies()).get(previewCookie())?.value)
+    if (pv?.admin === String(u._id)) {
+      const d = await User.findOne({ demo: true }).select('name email role student').lean()
+      const dRole = d ? await Role.findById(d.role).lean() : null
+      if (d?.student && dRole) return {
+        _id: d._id, name: d.name, email: d.email, type: 'student', roleKey: dRole.key, roleName: 'Demo student (preview)',
+        perms: dRole.perms ?? [], scope: (dRole.scope as Scope) ?? 'assigned', student: d.student, preview: { admin: u.name },
+      }
+    }
+  }
   return {
     _id: u._id, name: u.name, email: u.email, type: u.type ?? 'administrative',
     roleKey: role.key, roleName: role.name, perms: role.perms ?? [], scope: (role.scope as Scope) ?? 'all',
@@ -89,6 +105,13 @@ const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: process.env
 
 export async function startSession(u: { _id: unknown; sessionVersion: number }) {
   ;(await cookies()).set(cookieName(), await sign({ sub: String(u._id), v: u.sessionVersion }), cookieOptions(MAX_AGE))
+}
+
+export async function startPreview(adminId: unknown) {
+  ;(await cookies()).set(previewCookie(), await seal({ admin: String(adminId) }, PREVIEW_HOURS * 3600), cookieOptions(PREVIEW_HOURS * 3600))
+}
+export async function endPreview() {
+  ;(await cookies()).set(previewCookie(), '', cookieOptions(0))
 }
 
 export async function endSession() {

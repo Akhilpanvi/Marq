@@ -142,3 +142,31 @@ export async function decideChange(_: State, fd: FormData): Promise<State> {
     return { ok: approve ? 'Approved and applied.' : 'Rejected.' }
   })
 }
+
+/** Director only: mark a posted day's periods Excused (on duty / medical) — or undo it. Applied at once, with history. */
+export async function markExcused(_: State, fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('attendance.approve')
+    const reg = await DailyRegister.findOne({ day: str(fd, 'day', 10) }).lean()
+    if (!reg) throw new Invalid('No register for that day.')
+    const student = oid(fd, 'student')
+    if (!student) throw new Invalid('Choose a student.')
+    const which = str(fd, 'period', 3)
+    const periods = which === 'all' ? reg.periods : reg.periods.filter(p => p.no === Number(which))
+    if (!periods.length) throw new Invalid('Choose a period.')
+    const undo = fd.get('to') === 'absent'
+    const reason = str(fd, 'reason', 300)
+    if (reason.length < 3) throw new Invalid('Give the reason (e.g. on duty, medical).')
+    const sessions = await TrainingSession.find({ register: reg._id, start: { $in: periods.flatMap(p => (p.start ? [p.start] : [])) } }).distinct('_id')
+    const from = undo ? 'excused' : 'absent', to = undo ? 'absent' : 'excused'
+    const marks = await Attendance.find({ session: { $in: sessions }, student, status: from }).select('_id').lean()
+    if (!marks.length) throw new Invalid(undo ? 'No excused periods to undo for this student and period.' : 'Only absent periods can be excused — this student was not absent then.')
+    await Attendance.updateMany(
+      { _id: { $in: marks.map(m => m._id) } },
+      { $set: { status: to, markedBy: me._id }, $push: { history: { from, to, by: me._id, at: new Date(), reason: `${undo ? 'Excused removed' : 'Excused'} by ${me.name}: ${reason}` } } },
+    )
+    await audit(me, 'attendance', undo ? 'register.excuseRemoved' : 'register.excused', reg.day, { status: from }, { status: to, student, periods: which, reason })
+    revalidatePath('/attendance/register')
+    return { ok: `${marks.length} period${marks.length === 1 ? '' : 's'} marked ${to}.` }
+  })
+}

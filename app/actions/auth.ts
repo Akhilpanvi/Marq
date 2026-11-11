@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import type { Types } from 'mongoose'
 import { after } from 'next/server'
 import { db } from '@/lib/db'
-import { audit, clientIp, currentUser, endSession, rateLimit, startSession } from '@/lib/auth'
+import { audit, clientIp, currentUser, endPreview, endSession, rateLimit, startSession } from '@/lib/auth'
 import { hashPassword, passwordIssue, verifyPassword } from '@/lib/password'
 import { str, type State } from '@/lib/form'
 import { issueLink, sha256 } from '@/lib/tokens'
@@ -46,6 +46,7 @@ export async function login(_: State, fd: FormData): Promise<State> {
 }
 
 export async function logout() {
+  await endPreview()
   await endSession()
   redirect('/login')
 }
@@ -53,6 +54,7 @@ export async function logout() {
 export async function changePassword(_: State, fd: FormData): Promise<State> {
   const me = await currentUser()
   if (!me) redirect('/login')
+  if (me.preview) return { error: 'Password changes are turned off in the student preview.' }
   const [current, next, confirm] = ['current', 'next', 'confirm'].map(k => String(fd.get(k) ?? ''))
   const issue = passwordIssue(next)
   if (issue) return { error: issue }

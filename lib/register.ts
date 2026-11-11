@@ -31,7 +31,7 @@ export async function loadRegisters(from?: string, to?: string, scope?: Types.Ob
   return { regs: regs.map(r => ({ ...r, periods: r.periods as Period[] })), students, status, corrected }
 }
 
-const mark = (st?: string) => (st === 'absent' ? 'A' : st ? 'P' : '')
+const mark = (st?: string) => (st === 'absent' ? 'A' : st === 'excused' ? 'E' : st ? 'P' : '')
 
 /** The college sheet: 3 header rows (period no., time, date), P/A cells, Lunch Break column. */
 export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType<typeof loadRegisters>>) {
@@ -48,7 +48,7 @@ export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType
 const thin = { style: 'thin' as const, color: { argb: 'FFBFBFBF' } }
 const border = { top: thin, left: thin, bottom: thin, right: thin }
 const fill = (argb: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb } })
-const ABSENT = 'FFF4B6B6', HEAD = 'FFF8CBAD', PERIOD = 'FFC6E0B4'
+const ABSENT = 'FFF4B6B6', EXCUSED = 'FFE7E6E6', HEAD = 'FFF8CBAD', PERIOD = 'FFC6E0B4'
 
 function styleHeader(ws: ExcelJS.Worksheet, rows: number, studentCols: number) {
   for (let r = 1; r <= rows; r++)
@@ -75,6 +75,7 @@ export async function dayWorkbook(day: string, periods: Period[], data: Awaited<
       c.border = border
       if (i > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
+      else if (c.value === 'E') c.fill = fill(EXCUSED)
     })
   ws.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...cols.map(() => ({ width: 14 }))]
   ws.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 3 }]
@@ -89,10 +90,11 @@ export function summaryRows(data: Awaited<ReturnType<typeof loadRegisters>>) {
     const days = data.regs.map(r => {
       const byP = data.status.get(String(s._id))?.get(r.day)
       if (!byP) return '—'
-      const n = [...byP.values()].filter(v => v !== 'absent').length
-      held += byP.size
+      const vals = [...byP.values()].filter(v => v !== 'excused') // excused periods are not counted
+      const n = vals.filter(v => v !== 'absent').length
+      held += vals.length
       attended += n
-      return `${n}/${byP.size}`
+      return `${n}/${vals.length}`
     })
     return [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...days, held, attended, held - attended, held ? Math.round((attended / held) * 10000) / 100 : null] as (string | number | null)[]
   })
@@ -136,12 +138,13 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
   for (const i of [n - 2, n - 1, n]) det.mergeCells(1, i, 2, i)
   data.students.forEach((s, i) => {
     const cells = data.regs.flatMap(r => r.periods.map(p => mark(data.status.get(String(s._id))?.get(r.day)?.get(p.no))))
-    const held = cells.filter(Boolean).length, att = cells.filter(c => c === 'P').length
+    const held = cells.filter(c => c === 'P' || c === 'A').length, att = cells.filter(c => c === 'P').length
     const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cells, held, att, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
     row.eachCell({ includeEmpty: true }, (c, j) => {
       c.border = border
       if (j > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
+      else if (c.value === 'E') c.fill = fill(EXCUSED)
     })
     row.getCell(n).numFmt = '0.00"%"'
   })

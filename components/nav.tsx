@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3, Bell, BookOpen, Code2, Inbox, MessageSquareHeart, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
-  GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users,
+  Eye, GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users,
 } from 'lucide-react'
 import { hasPerm, type Perm } from '@/lib/rbac'
 
@@ -46,6 +46,7 @@ const ADMIN: { group: string; items: Item[] }[] = [
       { href: '/inbox', label: 'Feedback Inbox', icon: Inbox, perm: 'feedback.view' },
       { href: '/audit', label: 'Audit Logs', icon: ScrollText, perm: 'audit.view' },
       { href: '/settings', label: 'Settings', icon: Settings, perm: 'settings.view' },
+      { href: '/preview', label: 'Student View (demo)', icon: Eye, perm: '*' as Perm },
       { href: '/feedback', label: 'Send Feedback', icon: MessageSquareHeart },
     ],
   },

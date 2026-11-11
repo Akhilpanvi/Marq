@@ -617,6 +617,19 @@ try {
     assert.match(cons, /"Bharat Kumar","[^"]*","5\/6","6","5","1","83.33"/)
     const x = await dir.request.get('/api/attendance/consolidated?format=xlsx')
     assert.match(x.headers()['content-type'], /spreadsheetml/)
+
+    // Excused: only the Director, only on a posted day, only absent periods
+    assert.equal(await aa.getByRole('button', { name: 'Mark excused' }).count(), 0)
+    await dir.goto(`/attendance/register?day=${iso}`)
+    const ex = await open(dir, 'Mark excused')
+    await ex.locator('select[name=student]').selectOption({ label: '2300030003 · Chitra Devi' })
+    await ex.locator('select[name=period]').selectOption('3')
+    await ex.locator('input[name=reason]').fill('On duty — hackathon')
+    await ex.getByRole('button', { name: 'Apply' }).click()
+    await toast(dir, '1 period marked excused.')
+    const chitra = await mongoose.connection.collection('students').findOne({ regNo: '2300030003' })
+    assert.equal(await mongoose.connection.collection('attendances').countDocuments({ student: chitra!._id, status: 'excused' }), 1)
+    assert.match(await (await dir.request.get(`/api/attendance/day?day=${iso}&format=csv`)).text(), /"Chitra Devi","[^"]*","E","A"/)
     await dir.context().close()
   })
 
@@ -754,8 +767,29 @@ try {
     assert.equal(await mongoose.connection.collection('auditlogs').countDocuments({ action: 'student.delete', target: String(st!._id) }), 1)
   })
 
+  await step('Super Admin student preview: demo student walks the portal and is never counted', async () => {
+    await sa.goto('/preview')
+    await sa.getByRole('button', { name: 'Open student view' }).click()
+    await sa.waitForURL('**/onboarding')
+    await sa.getByText('Student view (demo)').waitFor()
+    await sa.getByRole('heading', { name: 'Welcome, Demo' }).waitFor()
+    const demo = await mongoose.connection.collection('students').findOne({ demo: true })
+    assert.ok(demo)
+    // hidden everywhere else
+    await aa.goto('/students?q=DEMO')
+    assert.doesNotMatch(await aa.locator('main').innerText(), /Demo Student/)
+    await aa.goto('/attendance/register')
+    assert.doesNotMatch(await aa.locator('main').innerText(), /DEMO-0001/)
+    assert.doesNotMatch(await (await sa.request.get('/api/reports/students?format=csv')).text(), /DEMO-0001/)
+    assert.equal(await aa.getByRole('link', { name: 'Student View (demo)' }).count(), 0) // Super Admin only
+    await sa.getByRole('button', { name: 'Exit preview' }).click()
+    await sa.waitForURL('**/preview')
+    await sa.goto('/overview')
+    await sa.getByRole('link', { name: 'Student View (demo)' }).first().waitFor()
+  })
+
   await step('Every navigation page renders without server errors for Super Admin', async () => {
-    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/preview', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
       assert.equal(r?.status(), 200, path)
     }
