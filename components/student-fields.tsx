@@ -10,7 +10,7 @@ export function StudentFields({ s = {}, batches, mentors }: { s?: S; batches: Op
       <Field label="Registration number *"><input name="regNo" required maxLength={20} defaultValue={s.regNo} className="input uppercase" /></Field>
       <Field label="Full name *"><input name="name" required maxLength={120} defaultValue={s.name} className="input" /></Field>
       <Field label="University email *"><input name="email" type="email" required defaultValue={s.email} className="input" /></Field>
-      <Field label="Personal email"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
+      <Field label="Placement mail ID"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
       <Field label="Mobile number"><input name="phone" type="tel" maxLength={20} defaultValue={s.phone ?? ''} className="input" /></Field>
       <Field label="Department"><input name="department" maxLength={80} defaultValue={s.department ?? ''} className="input" placeholder="CSE" /></Field>
       <Field label="Specialization"><input name="specialization" maxLength={80} defaultValue={s.specialization ?? ''} className="input" /></Field>

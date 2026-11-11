@@ -6,7 +6,7 @@ export async function GET() {
   const body = await xlsx([
     {
       name: 'Students',
-      columns: ['Registration Number', 'Full Name', 'University Email', 'Personal Email', 'Mobile Number', 'Department', 'Specialization', 'Academic Year', 'Section', 'Batch', 'Mentor Email', 'Cohort Status'],
+      columns: ['Registration Number', 'Full Name', 'University Email', 'Placement Mail ID', 'Mobile Number', 'Department', 'Specialization', 'Academic Year', 'Section', 'Batch', 'Mentor Email', 'Cohort Status'],
       rows: [],
     },
     {

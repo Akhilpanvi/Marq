@@ -19,7 +19,7 @@ export async function saveStudent(_: State, fd: FormData): Promise<State> {
     const email = need(fd, 'email', 'University email', 120).toLowerCase()
     if (!EMAIL.test(email)) throw new Invalid('Enter a valid university email.')
     const personalEmail = str(fd, 'personalEmail', 120).toLowerCase()
-    if (personalEmail && !EMAIL.test(personalEmail)) throw new Invalid('Enter a valid personal email.')
+    if (personalEmail && !EMAIL.test(personalEmail)) throw new Invalid('Enter a valid placement mail ID.')
     const set: Record<string, unknown> = {
       regNo, email, personalEmail: personalEmail || undefined,
       name: need(fd, 'name', 'Full name', 120),
@@ -122,7 +122,7 @@ const ALIASES = {
   regNo: ['registration number', 'reg no', 'regno', 'reg. no', 'registration no', 'student id', 'id no'],
   name: ['full name', 'student name'],
   email: ['university email', 'college email', 'official email', 'email id'],
-  personalEmail: ['personal email'],
+  personalEmail: ['placement mail id', 'placement email', 'placement email id', 'personal email'],
   phone: ['mobile', 'mobile number', 'phone number', 'contact'],
   department: ['dept', 'branch'],
   specialization: ['specialisation', 'stream'],
@@ -158,7 +158,7 @@ async function validateImport(fd: FormData) {
     if (!d.name) errors.push('Name is missing')
     if (!email) errors.push('University email is missing')
     else if (!EMAIL.test(email)) errors.push('University email is invalid')
-    if (d.personalEmail && !EMAIL.test(d.personalEmail)) errors.push('Personal email is invalid')
+    if (d.personalEmail && !EMAIL.test(d.personalEmail)) errors.push('Placement mail ID is invalid')
     if (d.phone && !/^[+\d][\d\s-]{6,18}$/.test(d.phone)) errors.push('Mobile number is invalid')
     const batch = d.batch ? batchByName.get(d.batch.toLowerCase()) : undefined
     if (d.batch && !batch) errors.push(`Batch "${d.batch}" does not exist`)

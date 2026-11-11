@@ -23,7 +23,7 @@ A Top Notch student enters their university email → MARQ confirms they are on 
 | 4 | **Check your email** ([05](registration/05-email-sent.png)) | Opens the email from *MARQ · KL University* and clicks **Activate account** | One-time link, valid 7 days; only a hash is stored |
 | 5 | **Set your password** ([06](registration/06-set-password.png)) | Chooses a password (10+ characters) | Link unused and unexpired; signs them in |
 | 6 | **Coding profiles** — step 2 of 3 ([07](registration/07-coding-profiles.png)) | Enters LeetCode, CodeChef and GitHub usernames (Codeforces optional), clicks **Verify & continue** | Each account must exist — checked live; wrong usernames are named in the error |
-| 7 | **Your profile** — step 3 of 3 ([08](registration/08-profile.png)) | Mobile, personal email, headline, LinkedIn, resume link, at least 3 skills (GitHub link, portfolio optional); clicks **Finish & open MARQ** | All required fields valid |
+| 7 | **Your profile** — step 3 of 3 ([08](registration/08-profile.png)) | Mobile, placement mail ID, headline, LinkedIn, resume link, at least 3 skills (GitHub link, portfolio optional); clicks **Finish & open MARQ** | All required fields valid |
 | 8 | **My Dashboard** ([09](registration/09-dashboard.png)) | Lands on their dashboard | Onboarding complete — the portal is unlocked |
 | 9 | **Job Opportunities** ([10](registration/10-drive-status.png)) | Answers *“Status of the candidate for this drive”* on each company drive | Saved to their application timeline |
 
@@ -67,7 +67,7 @@ Until steps 6 and 7 are done, every page sends the student back to onboarding �
 | 0:50 | Email sent (05) | “Check your inbox — and spam — for an email from MARQ · KL University. Click *Activate account*.” |
 | 1:05 | Set password (06) | “Choose a password of at least ten characters. You’re signed in straight away.” |
 | 1:20 | Coding profiles (07) | “Add your LeetCode, CodeChef and GitHub usernames — Codeforces is optional. MARQ checks each one exists.” |
-| 1:45 | Profile (08) | “Complete your profile: mobile, personal email, a one-line headline, LinkedIn, a resume link and at least three skills.” |
+| 1:45 | Profile (08) | “Complete your profile: mobile, placement mail ID, a one-line headline, LinkedIn, a resume link and at least three skills.” |
 | 2:10 | Dashboard (09) | “That’s it — your dashboard shows your training, scores and coding rank.” |
 | 2:25 | Drive status (10) | “For every company drive, keep *Status of the candidate* up to date — it powers the programme’s placement analysis.” |
 | 2:45 | Sign-in page | “Need help? Use Change password, Forgot password, or Feedback on the sign-in page.” |

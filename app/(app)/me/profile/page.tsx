@@ -24,7 +24,7 @@ export default async function MyProfile() {
         <Card title="Contact details">
           <ActionForm action={updateMyProfile} submit="Save" reset={false}>
             <Field label="Mobile number"><input name="phone" type="tel" defaultValue={s.phone ?? ''} className="input" /></Field>
-            <Field label="Personal email"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
+            <Field label="Placement mail ID"><input name="personalEmail" type="email" defaultValue={s.personalEmail ?? ''} className="input" /></Field>
             <Field label="Profile picture" hint="JPEG, PNG or WebP, under 300 KB."><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></Field>
           </ActionForm>
         </Card>

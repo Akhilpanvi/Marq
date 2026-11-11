@@ -89,7 +89,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
           </Card>
           <Card title="Profile" icon={UserRound}>
             <KV items={[
-              ['University email', s.email], ['Personal email', s.personalEmail], ['Mobile', s.phone],
+              ['University email', s.email], ['Placement mail ID', s.personalEmail], ['Mobile', s.phone],
               ['Department', s.department], ['Specialization', s.specialization], ['Year · Section', [s.year, s.section].filter(Boolean).join(' · ')],
               ['Batch', j.batch?.name], ['Programme', j.program?.name], ['Mentor', mentor?.name],
               ['Portal account', account ? `${account.status}${account.lastLoginAt ? ` · last seen ${day(account.lastLoginAt)}` : ''}` : 'Not created'],

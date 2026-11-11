@@ -24,7 +24,7 @@ export async function updateMyProfile(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const me = await requireStudent()
     const personalEmail = str(fd, 'personalEmail', 120).toLowerCase()
-    if (personalEmail && !EMAIL.test(personalEmail)) throw new Invalid('Enter a valid personal email.')
+    if (personalEmail && !EMAIL.test(personalEmail)) throw new Invalid('Enter a valid placement mail ID.')
     const phone = str(fd, 'phone', 20)
     if (phone && !/^[+\d][\d\s-]{6,18}$/.test(phone)) throw new Invalid('Enter a valid mobile number.')
     const set: Record<string, unknown> = { personalEmail: personalEmail || undefined, phone }

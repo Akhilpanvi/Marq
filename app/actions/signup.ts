@@ -81,7 +81,7 @@ export async function onboardProfile(_: State, fd: FormData): Promise<State> {
     const me = await requireStudent()
     const phone = str(fd, 'phone', 20), personalEmail = str(fd, 'personalEmail', 120).toLowerCase()
     if (!/^[+\d][\d\s-]{6,18}$/.test(phone)) throw new Invalid('Enter a valid mobile number.')
-    if (!EMAIL.test(personalEmail)) throw new Invalid('Enter a valid personal email.')
+    if (!EMAIL.test(personalEmail)) throw new Invalid('Enter a valid placement mail ID.')
     const professional = { headline: str(fd, 'headline', 140), linkedin: link(fd, 'linkedin'), github: link(fd, 'githubUrl'), portfolio: link(fd, 'portfolio'), resume: link(fd, 'resume'), skills: list(fd, 'skills') }
     if (!professional.headline) throw new Invalid('Add a one-line headline.')
     if (!professional.linkedin) throw new Invalid('Add your LinkedIn profile link.')
