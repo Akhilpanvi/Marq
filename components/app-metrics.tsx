@@ -9,8 +9,8 @@ export function AppMetricTiles({ m }: { m: M }) {
       <Stat label="Total applications" value={m.total} />
       <Stat label="In progress" value={m.inProgress} />
       <Stat label="Written tests" value={m.written} />
-      <Stat label="Technical interviews" value={m.technical} />
-      <Stat label="HR interviews" value={m.hr} />
+      <Stat label="Technical rounds" value={m.technical} />
+      <Stat label="HR rounds" value={m.hr} />
       <Stat label="Offers received" value={m.offers} />
       <Stat label="Accepted offers" value={m.accepted} />
       <Stat label="Rejections" value={m.rejected} />

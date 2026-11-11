@@ -32,7 +32,7 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
             <ActionForm action={createAnnouncement} submit="Publish">
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Title *" className="sm:col-span-2"><input name="title" required className="input" /></Field>
-                <Field label="Category"><select name="category" className="input">{['General', 'Training', 'Assessment', 'Placement', 'Opportunity', 'Interview'].map(c => <option key={c}>{c}</option>)}</select></Field>
+                <Field label="Category"><select name="category" className="input">{['General', 'Training', 'Assessment', 'Placement', 'Opportunity'].map(c => <option key={c}>{c}</option>)}</select></Field>
               </div>
               <Field label="Message *"><textarea name="body" required rows={5} className="input" /></Field>
               <div className="grid gap-4 sm:grid-cols-2">

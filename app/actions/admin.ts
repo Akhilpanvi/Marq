@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { audit, guard } from '@/lib/auth'
 import { attempt, Invalid, need, num, oid, oids, oneOf, str, type State } from '@/lib/form'
-import { DEFAULT_SCORING, DIMENSIONS, CATEGORIES, type Dim } from '@/lib/scoring'
+import { DEFAULT_SCORING, DIMENSIONS, type Dim } from '@/lib/scoring'
 import { APP_STATUSES } from '@/lib/placement'
 import { getScoring, putSetting } from '@/lib/settings'
 import { notifyUsers } from '@/lib/notify'
@@ -52,10 +52,12 @@ export async function saveScoring(_: State, fd: FormData): Promise<State> {
     const weights = (prefix: string) => Object.fromEntries((Object.keys(DIMENSIONS) as Dim[]).map(k => [k, num(fd, `${prefix}_${k}`, { min: 0, max: 100, label: `${DIMENSIONS[k]} weight` }) ?? 0])) as Record<Dim, number>
     const overall = weights('o'), readiness = weights('r')
     if (!Object.values(overall).some(Boolean) || !Object.values(readiness).some(Boolean)) throw new Invalid('At least one weight must be above zero.')
-    const dims = Object.keys(DIMENSIONS).filter(k => k !== 'attendance')
-    const categoryDim = Object.fromEntries(CATEGORIES.map(c => [c, str(fd, `c_${c}`, 20) || DEFAULT_SCORING.categoryDim[c]]).filter(([, v]) => dims.includes(v)))
+    const targets = {
+      codingPoints: num(fd, 'target_coding', { min: 1, max: 1e9, label: 'Coding full-marks points' }) ?? DEFAULT_SCORING.targets.codingPoints,
+      githubPoints: num(fd, 'target_github', { min: 1, max: 1e9, label: 'GitHub full-marks points' }) ?? DEFAULT_SCORING.targets.githubPoints,
+    }
     const t = (k: keyof typeof DEFAULT_SCORING.thresholds, max = 100) => num(fd, `t_${k}`, { min: 0, max, label: k }) ?? DEFAULT_SCORING.thresholds[k]
-    const value = { overall, readiness, categoryDim, thresholds: { high: t('high'), attention: t('attention'), attendance: t('attendance'), trend: t('trend', 50) } }
+    const value = { overall, readiness, targets, thresholds: { high: t('high'), attention: t('attention'), attendance: t('attendance'), trend: t('trend', 50) } }
     await putSetting('scoring', value)
     await audit(me, 'settings', 'scoring.update', 'scoring', before, value)
     revalidatePath('/', 'layout')

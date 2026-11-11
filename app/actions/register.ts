@@ -25,7 +25,8 @@ export async function readRegisterFile(_: State, fd: FormData): Promise<State> {
     }
     const known = new Set((await Student.find({ regNo: { $in: Object.keys(parsed.marks) } }).select('regNo').lean()).map(s => s.regNo))
     const unknown = Object.keys(parsed.marks).filter(r => !known.has(r))
-    return { ok: `Read ${Object.keys(parsed.marks).length} students${parsed.day ? ` for ${parsed.day.split('-').reverse().join('.')}` : ''}. Check the grid, then Verify.`, data: { ...parsed, unknown } }
+    const posted = parsed.day ? !!(await DailyRegister.exists({ day: parsed.day })) : false
+    return { ok: `Read ${Object.keys(parsed.marks).length} students${parsed.day ? ` for ${parsed.day.split('-').reverse().join('.')}` : ''}. Check the grid, then Verify.`, data: { ...parsed, unknown, posted } }
   })
 }
 

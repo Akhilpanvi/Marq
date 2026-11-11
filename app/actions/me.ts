@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { audit, requireStudent } from '@/lib/auth'
-import { attempt, EMAIL, Invalid, num, oid, str, type State } from '@/lib/form'
+import { attempt, EMAIL, Invalid, num, oid, photoLink, str, type State } from '@/lib/form'
 import { Attendance, Student, TrainingSession } from '@/models'
 
 /** Students can only rate sessions they attended (present/late), once; a resubmission replaces their rating. */
@@ -28,14 +28,9 @@ export async function updateMyProfile(_: State, fd: FormData): Promise<State> {
     const phone = str(fd, 'phone', 20)
     if (phone && !/^[+\d][\d\s-]{6,18}$/.test(phone)) throw new Invalid('Enter a valid mobile number.')
     const set: Record<string, unknown> = { personalEmail: personalEmail || undefined, phone }
-    const photo = fd.get('photo')
-    if (photo instanceof File && photo.size) {
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) throw new Invalid('Profile picture must be JPEG, PNG or WebP.')
-      if (photo.size > 300 * 1024) throw new Invalid('Profile picture must be under 300 KB.')
-      set.photo = { data: Buffer.from(await photo.arrayBuffer()), type: photo.type }
-    }
+    set.photoUrl = photoLink(fd)
     await Student.updateOne({ _id: me.student }, { $set: set })
-    await audit(me, 'students', 'student.selfUpdate', me.student, undefined, { personalEmail, phone, photo: !!set.photo })
+    await audit(me, 'students', 'student.selfUpdate', me.student, undefined, { personalEmail, phone, photoUrl: set.photoUrl })
     revalidatePath('/me/profile')
     return { ok: 'Profile updated.' }
   })

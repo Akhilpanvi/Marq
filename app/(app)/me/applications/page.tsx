@@ -6,24 +6,22 @@ import { getStatuses } from '@/lib/settings'
 import { statusTone } from '@/lib/placement'
 import { day } from '@/lib/format'
 import { OID } from '@/lib/form'
-import { Application, Interview } from '@/models'
+import { Application } from '@/models'
 import { Badge, Card, Empty, PageHeader } from '@/components/ui'
 import { Modal } from '@/components/form'
 import { AppMetricTiles } from '@/components/app-metrics'
-import { AppTimeline, ApplicationForm, InterviewForm, StatusForm } from '@/components/placement-ui'
+import { AppTimeline, ApplicationForm, StatusForm } from '@/components/placement-ui'
 
 export const metadata = { title: 'My Applications' }
 
 export default async function MyApplications({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
   const me = await requireStudent()
   const { open } = await searchParams
-  const [apps, m, statuses, interviews] = await Promise.all([
+  const [apps, m, statuses] = await Promise.all([
     Application.find({ student: me.student }).sort({ updatedAt: -1 }).lean(),
     appMetrics({ student: me.student }),
     getStatuses(),
-    Interview.find({ student: me.student }).select('application round at status').lean(),
   ])
-  const ints = (id: unknown) => interviews.filter(i => String(i.application) === String(id))
   const selected = OID.test(open ?? '') ? apps.find(a => String(a._id) === open) : null
   return (
     <>
@@ -52,9 +50,6 @@ export default async function MyApplications({ searchParams }: { searchParams: P
                 <p className="mb-3 text-sm text-muted">Update the status as you progress. Previous statuses are never overwritten.</p>
                 <StatusForm id={String(selected._id)} current={selected.status} statuses={statuses} />
                 {selected.link && <a href={selected.link} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-accent hover:underline">Application link ↗</a>}
-              </Card>
-              <Card title="Interviews" action={<Modal label="Add interview" title="Add interview round" className="btn-ghost py-1 text-xs" wide><InterviewForm apps={[[String(selected._id), `${selected.company} — ${selected.role}`]]} i={{ application: selected._id }} /></Modal>}>
-                {ints(selected._id).length ? <ul className="space-y-1 text-sm">{ints(selected._id).map(i => <li key={String(i._id)}>{i.round} · {day(i.at)} · <span className="text-muted">{i.status}</span></li>)}</ul> : <Empty>No interviews recorded for this application.</Empty>}
               </Card>
               <Card title="Timeline"><AppTimeline history={[...selected.history].reverse()} /></Card>
             </>

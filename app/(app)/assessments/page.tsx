@@ -55,7 +55,7 @@ export default async function AssessmentsPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="Assessment Centre" description="Technical, coding, aptitude, communication and mock-interview assessments.">
+      <PageHeader title="Assessment Centre" description="Technical, coding, aptitude and communication assessments.">
         {can(me, 'assessments.create') && (
           <Modal label={<><Plus className="size-4" />New assessment</>} title="New assessment" wide>
             <ActionForm action={saveAssessment} submit="Create"><AssessmentFields batches={visibleB} trainers={tOpts} /></ActionForm>

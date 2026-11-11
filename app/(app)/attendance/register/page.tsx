@@ -8,6 +8,7 @@ import { DailyRegister, Student, User } from '@/models'
 import { Badge, Card, Empty, Field, PageHeader, Table } from '@/components/ui'
 import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { RegisterEditor } from '@/components/register-editor'
+import { RegisterBulk } from '@/components/register-bulk'
 import { decideChange, requestChange } from '@/app/actions/register'
 
 export const metadata = { title: 'Daily Register' }
@@ -25,6 +26,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   ])
   const canPost = can(me, 'attendance.create')
   const canApprove = can(me, 'attendance.approve')
+  const active = canPost ? await Student.find({ status: 'active' }).select('regNo name department specialization').sort({ regNo: 1 }).lean() : []
+  const roster = active.map(s => ({ id: String(s._id), regNo: s.regNo, name: s.name, department: s.department ?? '', specialization: s.specialization ?? '' }))
 
   return (
     <>
@@ -40,9 +43,16 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
+      {canPost && (
+        <details className="group mb-4">
+          <summary className="btn-outline w-fit cursor-pointer list-none">Upload attendance — multiple files / dates</summary>
+          <div className="mt-3"><RegisterBulk students={roster} maxDay={today} /></div>
+        </details>
+      )}
+
       {reg ? <Locked day={day} reg={{ ...reg, periods: reg.periods as Period[] }} meId={String(me._id)} canPost={canPost} canApprove={canApprove} superadmin={me.perms.includes('*')} scope={await scopedStudentIds(me)} />
         : canPost ? (
-          <RegisterEditor initialDay={day} maxDay={today} students={(await Student.find({ status: 'active' }).select('regNo name department specialization').sort({ regNo: 1 }).lean()).map(s => ({ id: String(s._id), regNo: s.regNo, name: s.name, department: s.department ?? '', specialization: s.specialization ?? '' }))} />
+          <RegisterEditor initialDay={day} maxDay={today} students={roster} />
         ) : <Empty>No register has been posted for {day.split('-').reverse().join('.')}.</Empty>}
 
       <Card title="Recent registers" className="mt-6" pad={false}>

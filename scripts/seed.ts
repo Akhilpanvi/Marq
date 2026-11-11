@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 import { db } from '../lib/db'
 import { hashPassword, passwordIssue } from '../lib/password'
 import { DEFAULT_ROLES } from '../lib/rbac'
-import { Role, Setting, User } from '../models'
+import { Role, Setting, Student, User } from '../models'
 
 export async function seedRoles() {
   for (const r of DEFAULT_ROLES)
@@ -31,6 +31,22 @@ const ADDED_PERMS: Record<string, string[]> = {}
 
 /** One-time data migrations, recorded in Settings so they never run twice (later edits in Roles are kept). */
 const MIGRATIONS: { id: string; run: () => Promise<void> }[] = [
+  {
+    // interview scheduling was removed: drop its permissions from stored roles
+    id: '2026-11-remove-interviews',
+    run: async () => {
+      const r = await Role.updateMany({}, { $pull: { perms: { $regex: '^interviews\\.' } } })
+      console.log(`  removed interview permissions from ${r.modifiedCount} role(s)`)
+    },
+  },
+  {
+    // profile pictures are links now (Google Drive, else GitHub avatar): drop stored image bytes to free storage
+    id: '2026-11-photos-as-links',
+    run: async () => {
+      const r = await Student.collection.updateMany({ photo: { $exists: true } }, { $unset: { photo: '' } })
+      console.log(`  removed stored photos from ${r.modifiedCount} student(s)`)
+    },
+  },
   {
     // Administrator, Admin Assistant and Placement Administrator become one role: Placement Admin
     id: '2026-11-merge-placement-admin',

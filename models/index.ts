@@ -66,7 +66,7 @@ const studentSchema = new Schema(
     specialization: String,
     year: String,
     section: String,
-    photo: { data: { type: Buffer, select: false }, type: { type: String } },
+    photoUrl: String, // Google Drive share link; blank → GitHub avatar. Image bytes are never stored.
     batch: { type: ObjectId, ref: 'Batch', index: true },
     mentor: { type: ObjectId, ref: 'User', index: true },
     status: { type: String, enum: ['active', 'on_hold', 'withdrawn', 'completed'], default: 'active', index: true },
@@ -293,26 +293,6 @@ const applicationSchema = new Schema(
 applicationSchema.index({ student: 1, key: 1 }, { unique: true })
 export const Application = model('Application', applicationSchema)
 
-const interviewSchema = new Schema(
-  {
-    application: { type: ObjectId, ref: 'Application', required: true, index: true },
-    student: { type: ObjectId, ref: 'Student', required: true, index: true },
-    company: String,
-    role: String,
-    round: { type: String, required: true },
-    at: { type: Date, required: true, index: true },
-    mode: { type: String, enum: ['Online', 'Onsite', 'Telephonic'], default: 'Online' },
-    link: String,
-    status: { type: String, enum: ['scheduled', 'completed', 'cancelled', 'no-show'], default: 'scheduled' },
-    result: { type: String, enum: ['pending', 'cleared', 'rejected', 'on-hold'], default: 'pending' },
-    feedback: String,
-    remarks: String,
-    reminded: { type: Boolean, default: false },
-    createdBy: { type: ObjectId, ref: 'User' },
-  },
-  ts,
-)
-export const Interview = model('Interview', interviewSchema)
 
 /* ───────────── Communication, money, audit ───────────── */
 

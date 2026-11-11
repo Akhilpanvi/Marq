@@ -131,16 +131,16 @@ try {
     '2300030003,Chitra Devi,2300030003@kluniversity.in,ECE,Batch B,m1@marq.test,',
     '2300030004,Dev Patel,2300030004@kluniversity.in,ECE,Batch B,,',
     '2300030001,Asha Duplicate,dup@kluniversity.in,CSE,,,',
-    '2300030005,No Email,,CSE,,,',
+    '2300030005,Bad Email,not-an-email,CSE,,,',
     '2300030006,Bad Batch,2300030006@kluniversity.in,CSE,Batch Z,,',
   ].join('\n'))
 
-  await step('Admin Assistant imports students: preview flags duplicate, missing email and unknown batch; confirm imports 4', async () => {
+  await step('Admin Assistant imports students: preview flags duplicate, invalid email and unknown batch; confirm imports 4', async () => {
     await aa.goto('/students/import')
     await aa.setInputFiles('input[type=file]', csv)
     await aa.getByRole('button', { name: /Validate/ }).click()
     await aa.getByText('Duplicate registration number in this file').waitFor()
-    await aa.getByText('University email is missing').waitFor()
+    await aa.getByText('University email is invalid').waitFor()
     await aa.getByText('Batch "Batch Z" does not exist').waitFor()
     const dl = aa.waitForEvent('download')
     await aa.getByRole('button', { name: 'Failed records' }).click()
@@ -247,13 +247,13 @@ try {
     await toast(ta, 'Saved 4 results')
   })
 
-  await step('Scores are computed from real data only (Asha: coding 80, aptitude 70, attendance 100)', async () => {
+  await step('Scores are computed from real data only (Asha: assessments 80 & 70, attendance 100, no coding profiles yet)', async () => {
     await ta.goto(`/performance`)
     const row = ta.locator('tr', { hasText: 'Asha Rao' })
-    // overall = (80*25 + 70*15 + 100*15) / 55 = 82.7 → 83
-    await row.getByText('83', { exact: true }).first().waitFor()
+    // assessments = 75, attendance = 100; coding/GitHub not linked → weights re-normalise: (75*20 + 100*15) / 35 = 85.7 → 86
+    await row.getByText('86', { exact: true }).first().waitFor()
     await ta.goto(`/students/${ids['2300030004']}`)
-    await ta.getByText('Technical', { exact: true }).first().waitFor() // Dev has no technical data → "—", not 0
+    await ta.getByText('Link coding profiles').first().waitFor() // no coding data → "—" with a hint, not 0
   })
 
   await step('Trainer sees only their batch; other students 404 even by URL', async () => {
@@ -402,6 +402,8 @@ try {
     await s1.goto('/me/contests?platform=codeforces')
     await s1.getByText('(you)').first().waitFor()
     await s1.getByRole('button', { name: 'Sync now' }).count() // present only when linked
+    await s1.goto('/me')
+    await s1.locator('img[src^="https://github.com/torvalds.png"]').first().waitFor({ state: 'attached' }) // GitHub picture, nothing stored
   })
 
   await step('Professional details save; hiding from leaderboard removes the student', async () => {
@@ -440,7 +442,6 @@ try {
     await s1.waitForURL('**/denied')
     assert.doesNotMatch(await s1.content(), /Chitra/)
     assert.equal((await s1.request.get('/api/reports/students?format=csv')).status(), 403)
-    assert.equal((await s1.goto(`/api/students/${ids['2300030003']}/photo`))?.status(), 404)
     await s1.goto('/me/assessments')
     await s1.getByText('Coding Test 1').waitFor()
     const html = await s1.content()
@@ -566,7 +567,7 @@ try {
     await wb.xlsx.writeFile(file)
 
     await aa.goto('/attendance/register')
-    await aa.setInputFiles('input[type=file]', file)
+    await aa.setInputFiles('input[type=file]:not([multiple])', file)
     await toast(aa, /Read 4 students for/)
     const iso = d.split('.').reverse().join('-')
     assert.equal(await aa.locator('input[type=date]').nth(1).inputValue(), iso)
@@ -613,6 +614,40 @@ try {
     const x = await dir.request.get('/api/attendance/consolidated?format=xlsx')
     assert.match(x.headers()['content-type'], /spreadsheetml/)
     await dir.context().close()
+  })
+
+  await step('Attendance: upload several day sheets at once; each date is read from its file; posted days are skipped', async () => {
+    const ExcelJS = (await import('exceljs')).default
+    const sheet = async (daysAgo: number, absent: string[]) => {
+      const d = new Date(Date.now() - daysAgo * 86400_000).toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata' }).replace(/\//g, '.')
+      const wb = new ExcelJS.Workbook()
+      const ws = wb.addWorksheet('Sheet1')
+      ws.addRow(['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name', 3, 4, '', 8])
+      ws.addRow(['', '', '', '', '', '9.20 AM to 10.10 AM', '10.10 AM to 11.00 AM', '12.50 PM to 1.50 PM', '1.50 PM to 2.40 PM'])
+      ws.addRow(['', '', '', '', '', d])
+      ;[['2300030001', 'Asha Rao'], ['2300030002', 'Bharat Kumar'], ['2300030003', 'Chitra Devi'], ['2300030004', 'Dev Patel']].forEach(([id, n], i) => {
+        const m = absent.includes(id) ? 'A' : 'P'
+        ws.addRow([i + 1, id, 'CSE', 'CSE1', n, m, m, 'Lunch Break', m])
+      })
+      const file = join(tmp, `bulk-${daysAgo}.xlsx`) // no date in the name: it must come from the sheet
+      await wb.xlsx.writeFile(file)
+      return { file, iso: d.split('.').reverse().join('-') }
+    }
+    const a = await sheet(2, ['2300030004']), b = await sheet(3, []), again = await sheet(1, [])
+    await aa.goto('/attendance/register')
+    await aa.getByText('Upload attendance — multiple files / dates').click()
+    await aa.setInputFiles('input[type=file][multiple]', [a.file, b.file, again.file])
+    await aa.getByText('Already posted — will be skipped').waitFor({ timeout: 20_000 })
+    assert.equal(await aa.getByLabel('Date for bulk-2.xlsx').inputValue(), a.iso)
+    assert.equal(await aa.getByLabel('Date for bulk-3.xlsx').inputValue(), b.iso)
+    await aa.getByRole('button', { name: 'Verify 2 days' }).click()
+    const v = aa.locator('dialog[open]')
+    await v.getByText('Dev Patel').waitFor()
+    await v.getByRole('button', { name: 'Confirm & lock 2 days' }).click()
+    await toast(aa, '2 of 2 days saved and locked.')
+    const regs = await mongoose.connection.collection('dailyregisters').find({ day: { $in: [a.iso, b.iso] } }).toArray()
+    assert.equal(regs.length, 2)
+    assert.equal(regs.find(r => r.day === a.iso)!.absences, 3) // Dev, 3 periods
   })
 
   await step('Exports & reports: Excel for staff, branded printable view', async () => {
@@ -665,9 +700,7 @@ try {
     await ctx.close()
   })
 
-  await step('Cron reminder endpoint requires its secret', async () => {
-    assert.equal((await fetch(`${BASE}/api/cron/reminders`)).status, 401)
-    assert.equal((await fetch(`${BASE}/api/cron/reminders`, { headers: { authorization: 'Bearer test-cron' } })).status, 200)
+  await step('Cron endpoint requires its secret', async () => {
     assert.equal((await fetch(`${BASE}/api/cron/coding`)).status, 401)
     const r = await (await fetch(`${BASE}/api/cron/coding`, { headers: { authorization: 'Bearer test-cron' } })).json()
     assert.ok(r.ranked >= 1)
@@ -680,8 +713,24 @@ try {
     assert.equal(await sa.evaluate(() => document.documentElement.classList.contains('dark')), true)
   })
 
+  await step('Student import: sample file, roster headings (Student ID NO, Parent Branch, Branch) and default university email', async () => {
+    const sample = await aa.request.get('/api/students/template?sample=1')
+    assert.match(sample.headers()['content-disposition'], /sample/)
+    const roster = join(tmp, 'roster.csv')
+    writeFileSync(roster, 'Sl No.,Student ID NO,Parent Branch,Branch,Student Name\n1,2300031111,CSE,CSE-H,Roster Student\n')
+    await aa.goto('/students/import')
+    await aa.setInputFiles('input[type=file]', roster)
+    await aa.getByRole('button', { name: /Validate/ }).click()
+    await aa.getByRole('button', { name: /Confirm import \(1\)/ }).click()
+    await toast(aa, 'Import complete: 1 added')
+    const st = await mongoose.connection.collection('students').findOne({ regNo: '2300031111' })
+    assert.equal(st?.email, '2300031111@kluniversity.in')
+    assert.equal(st?.department, 'CSE')
+    assert.equal(st?.specialization, 'CSE-H')
+  })
+
   await step('Every navigation page renders without server errors for Super Admin', async () => {
-    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
       assert.equal(r?.status(), 200, path)
     }

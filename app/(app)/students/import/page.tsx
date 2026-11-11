@@ -9,9 +9,9 @@ export default async function ImportPage() {
   return (
     <>
       <PageHeader title="Bulk import students" back={{ href: '/students', label: 'Students' }}
-        description="Download the template, fill one row per student, upload, review every row, then confirm. Nothing is written until you confirm." />
+        description="Download the template (or the sample with example rows), fill one row per student, upload, review every row, then confirm. Nothing is written until you confirm." />
       <ImportWizard canUpdate={can(me, 'students.edit')} />
-      <p className="mt-4 text-xs text-muted">Batches are matched by name and mentors by account email; create them first. Re-importing the same registration number updates that student instead of duplicating them. Files never contain passwords — accounts are invited separately from the Students list.</p>
+      <p className="mt-4 text-xs text-muted">Only Registration Number and Full Name are required — a blank University Email becomes {"<regno>@kluniversity.in"}, and the Top Notch roster’s own headings (Student ID NO, Parent Branch, Branch) are understood. Batches are matched by name and mentors by account email; create them first. Re-importing the same registration number updates that student instead of duplicating them. Files never contain passwords — accounts are invited separately from the Students list.</p>
     </>
   )
 }

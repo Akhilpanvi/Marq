@@ -1,3 +1,4 @@
+import { driveId, drivePhotoLink } from './avatar'
 export type State = { ok?: string; error?: string; secret?: string; data?: unknown } | null
 
 /** A user-facing validation/permission error; anything else is a bug and propagates. */
@@ -63,4 +64,13 @@ export async function attempt(fn: () => Promise<State>): Promise<State> {
     if ((e as { code?: number }).code === 11000) return { error: 'A record with these details already exists.' }
     throw e
   }
+}
+
+/** Optional Google Drive link for a profile picture. Only the link is kept — never the image. */
+export function photoLink(fd: FormData): string | null {
+  const v = str(fd, 'photoUrl', 500)
+  if (!v) return null
+  const id = driveId(v)
+  if (!id) throw new Invalid('Profile picture must be a Google Drive share link (or leave it blank to use your GitHub picture).')
+  return drivePhotoLink(id)
 }

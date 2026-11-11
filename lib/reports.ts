@@ -4,7 +4,7 @@ import { can, scopedStudentIds, type Me } from './auth'
 import { profiles } from './intel'
 import { attendancePct, DIMENSIONS, type Dim } from './scoring'
 import { placementStatus, OFFERED, REJECTED, DRIVE_OPTIONS } from './placement'
-import { Application, Assessment, Job, AssessmentResult, Attendance, Batch, CodingStat, Evaluation, Interview, Student, Target, User } from '@/models'
+import { Application, Assessment, Job, AssessmentResult, Attendance, Batch, CodingStat, Evaluation, Student, Target, User } from '@/models'
 import { PLATFORMS, PLATFORM_KEYS, platformPoints, targetFlag } from './coding-points'
 import type { Perm } from './rbac'
 
@@ -137,15 +137,6 @@ export const REPORTS: Record<string, Def> = {
       const sInfo = new Map(students.map(s => [String(s._id), s]))
       const apps = await Application.find({ student: { $in: ids } }).sort({ updatedAt: -1 }).lean()
       return { title: 'Job applications', columns: ['Registration No', 'Name', 'Company', 'Role', 'Source', 'Applied on', 'Status', 'Status changes', 'Last updated', 'Remarks'], rows: apps.map(a => [sInfo.get(String(a.student))?.regNo ?? '', sInfo.get(String(a.student))?.name ?? '', a.company, a.role, a.source ?? '', d(a.appliedOn), a.status, a.history.length, d(a.updatedAt), a.remarks ?? '']) }
-    },
-  },
-  interviews: {
-    title: 'Interview outcomes', description: 'All interview rounds with result and feedback.', perm: 'interviews.view',
-    build: async (me, p) => {
-      const { students, ids } = await scopedStudents(me, p)
-      const sInfo = new Map(students.map(s => [String(s._id), s]))
-      const list = await Interview.find({ student: { $in: ids } }).sort({ at: -1 }).lean()
-      return { title: 'Interview outcomes', columns: ['Date', 'Registration No', 'Name', 'Company', 'Role', 'Round', 'Mode', 'Status', 'Result', 'Feedback'], rows: list.map(i => [d(i.at), sInfo.get(String(i.student))?.regNo ?? '', sInfo.get(String(i.student))?.name ?? '', i.company ?? '', i.role ?? '', i.round, i.mode ?? '', i.status ?? '', i.result ?? '', i.feedback ?? '']) }
     },
   },
   companies: {

@@ -20,14 +20,14 @@ app/
   (app)/training[/sessions/[id]]         programmes, batches, sessions, materials, attendance marking
   (app)/attendance, assessments[/[id]]   reports, assessment centre, marks entry/import, rankings
   (app)/performance, mentors             performance intelligence, mentorship & evaluations
-  (app)/companies, jobs, applications[/[id]], interviews, placement
+  (app)/companies, jobs, applications[/[id]], placement
   (app)/reports[/[kind]], announcements, notifications, inbox (feedback), audit, settings, account
   register, onboarding, feedback, change-password   public: self-registration, mandatory onboarding, feedback, password change
   (app)/me/*                             student portal (identity always from the session)
   actions/*.ts                           server actions — every one calls guard()/currentUser()/requireStudent()
   api/reports/[kind]                     CSV/Excel export (permission + scope + rate limit + audit)
-  api/students/template, [id]/photo      import template, scoped profile photos
-  api/cron/reminders, api/health         interview reminders (CRON_SECRET), health check
+  api/students/template[?sample=1]      import template / sample with example rows
+  api/cron/coding, api/health            nightly coding-profile sync (CRON_SECRET), health check
 lib/
   auth.ts        currentUser, requirePage/guard, studentScope, audit, rateLimit
   rbac.ts        modules × actions vocabulary, default roles
@@ -46,7 +46,9 @@ components/      UI kit (ui, list, form, charts, logo, …)
 
 ### Scoring
 
-Scores use recorded results and attendance only; missing data is shown as "—" and never counted as zero. Each assessment category feeds a dimension (technical, coding, aptitude, communication, interview, plus attendance). Overall and Readiness are weighted means over the dimensions that have data. Weights, the category mapping and the thresholds are editable in **Settings**, and the live formula is shown on every performance screen.
+Scores come from four parts, with no trainer judgement involved: **coding profiles** (LeetCode + CodeChef + Codeforces points, 100 at the target, default 20,000), **GitHub** (contributions + 10 × repos + 5 × stars, 100 at 400), **assessments** (average % of all marks) and **attendance** (% of periods). Default weights: Overall 40 / 25 / 20 / 15, Readiness 45 / 20 / 25 / 10. Missing data is shown as "—" and never counted as zero — weights re-normalise over the parts that have data. Weights, targets and thresholds are editable in **Settings**, and the live formula is shown on every performance screen.
+
+Profile pictures are never stored: a student's Google Drive share link if they give one, otherwise their GitHub avatar, otherwise initials.
 
 ## Local development
 
@@ -68,7 +70,7 @@ npm test             # scoring unit checks
 npx next build && npm run test:e2e
 ```
 
-`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (34 checks across every role, including self-registration, onboarding, the daily register, drive status, feedback and security). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
+`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (36 checks across every role, including self-registration, onboarding, the daily register, drive status, feedback and security). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
 
 ## Deployment (Vercel)
 
@@ -88,7 +90,7 @@ npx next build && npm run test:e2e
 5. **Domain:** add `marq.klef.me` to the Vercel project and create the DNS record Vercel shows (CNAME `marq` → `cname.vercel-dns.com`) at the `klef.me` DNS provider. HTTPS is automatic.
 6. Verify: `https://marq.klef.me/api/health` returns `{"ok":true}`; sign in; check Settings → Email.
 
-Logs: Vercel runtime logs (server errors are logged with `console.error`). The daily cron (08:00 IST) sends interview reminders for the next 24 h.
+Logs: Vercel runtime logs (server errors are logged with `console.error`). The daily cron (02:00 IST) re-syncs every linked coding profile.
 
 ## Branding
 

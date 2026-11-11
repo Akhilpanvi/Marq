@@ -1,7 +1,7 @@
 import { Field } from './ui'
 import type { Opt } from '@/lib/options'
 
-type S = { _id?: unknown; regNo?: string; name?: string; email?: string; personalEmail?: string | null; phone?: string | null; department?: string | null; specialization?: string | null; year?: string | null; section?: string | null; batch?: unknown; mentor?: unknown; status?: string | null }
+type S = { _id?: unknown; regNo?: string; name?: string; email?: string; personalEmail?: string | null; phone?: string | null; department?: string | null; specialization?: string | null; year?: string | null; section?: string | null; photoUrl?: string | null; batch?: unknown; mentor?: unknown; status?: string | null }
 
 export function StudentFields({ s = {}, batches, mentors }: { s?: S; batches: Opt[]; mentors: Opt[] }) {
   return (
@@ -27,7 +27,7 @@ export function StudentFields({ s = {}, batches, mentors }: { s?: S; batches: Op
           {[['active', 'Active'], ['on_hold', 'On hold'], ['withdrawn', 'Withdrawn'], ['completed', 'Completed']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
       </Field>
-      <Field label="Profile picture" hint="JPEG, PNG or WebP, under 300 KB." className="sm:col-span-2"><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></Field>
+      <Field label="Profile picture link" hint="Google Drive share link (Anyone with the link can view). Leave blank to use the GitHub profile picture." className="sm:col-span-2"><input name="photoUrl" type="url" placeholder="https://drive.google.com/file/d/…/view" defaultValue={s.photoUrl ?? ''} className="input" /></Field>
     </div>
   )
 }

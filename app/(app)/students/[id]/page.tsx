@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation'
-import { Activity, BookOpen, Briefcase, CalendarCheck, ClipboardCheck, MessagesSquare, Pencil, Trash2, UserRound, Video } from 'lucide-react'
+import { avatarSrc } from '@/lib/avatar'
+import { Activity, BookOpen, Briefcase, CalendarCheck, ClipboardCheck, MessagesSquare, Pencil, Trash2, UserRound } from 'lucide-react'
 import { can, requirePage, studentScope } from '@/lib/auth'
 import { OID } from '@/lib/form'
 import { journey } from '@/lib/journey'
 import { batchOptions, mentorOptions } from '@/lib/options'
 import { placementStatus, statusTone, OFFERED } from '@/lib/placement'
-import { day, dayTime, pct } from '@/lib/format'
+import { day, pct } from '@/lib/format'
 import { CodingStat, Student, User } from '@/models'
 import { PLATFORMS, PLATFORM_KEYS } from '@/lib/coding-points'
 import { fmt } from '@/lib/format'
@@ -27,7 +28,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
   const me = await requirePage('students.view')
   const { id } = await params
   if (!OID.test(id)) notFound()
-  const s = await Student.findOne({ $and: [{ _id: id }, await studentScope(me)] }).select('-photo.data').lean()
+  const s = await Student.findOne({ $and: [{ _id: id }, await studentScope(me)] }).lean()
   if (!s) notFound()
   const [j, account, mentor, batches, mentors] = await Promise.all([
     journey(s._id, s.batch),
@@ -46,7 +47,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
       <PageHeader back={{ href: '/students', label: me.scope === 'assigned' ? 'My Students' : 'Students' }}
         title={
           <span className="flex items-center gap-3">
-            <Avatar name={s.name} src={s.photo?.type ? `/api/students/${s._id}/photo` : null} size="size-12" />
+            <Avatar name={s.name} src={avatarSrc(s)} size="size-12" />
             <span>
               {s.name}
               <span className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-normal">
@@ -155,8 +156,8 @@ export default async function Student360({ params }: { params: Promise<{ id: str
           <EvaluationList items={j.evaluations} mentorName={j.mentorName} />
         </Card>
 
-        {(show('applications.view') || show('interviews.view')) && (
-          <div className="grid gap-6 lg:grid-cols-2">
+        {show('applications.view') && (
+          <div className="grid gap-6">
             <Card title={`Applications · ${j.apps.length}`} icon={Briefcase} pad={false} action={<span className="text-xs text-muted">{offers.length} offer{offers.length === 1 ? '' : 's'}</span>}>
               <Table head={['Company', 'Role', 'Status', 'Updated']} empty={<Empty>No applications yet.</Empty>}>
                 {j.apps.map(a => (
@@ -165,18 +166,6 @@ export default async function Student360({ params }: { params: Promise<{ id: str
                     <td className="td">{a.role}</td>
                     <td className="td"><Badge tone={statusTone(a.status)}>{a.status}</Badge></td>
                     <td className="td text-muted">{day(a.updatedAt)}</td>
-                  </tr>
-                ))}
-              </Table>
-            </Card>
-            <Card title={`Interviews · ${j.interviews.length}`} icon={Video} pad={false}>
-              <Table head={['Company', 'Round', 'When', 'Outcome']} empty={<Empty>No interviews yet.</Empty>}>
-                {j.interviews.map(i => (
-                  <tr key={String(i._id)}>
-                    <td className="td font-medium">{i.company}</td>
-                    <td className="td">{i.round}</td>
-                    <td className="td text-muted">{dayTime(i.at)}</td>
-                    <td className="td"><Badge tone={i.result === 'cleared' ? 'green' : i.result === 'rejected' ? 'red' : 'zinc'}>{i.status === 'scheduled' ? 'scheduled' : i.result}</Badge></td>
                   </tr>
                 ))}
               </Table>

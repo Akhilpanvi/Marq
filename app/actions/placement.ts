@@ -6,7 +6,7 @@ import { attempt, date, Invalid, link, list, need, num, oid, oneOf, str, type St
 import { appKey, DRIVE_OPTIONS } from '@/lib/placement'
 import { getStatuses } from '@/lib/settings'
 import { notifyStudents } from '@/lib/notify'
-import { Application, Company, Interview, Job, Student } from '@/models'
+import { Application, Company, Job, Student } from '@/models'
 
 const JOB_TYPES = ['Full-time', 'Internship', 'Internship + Full-time', 'Contract'] as const
 
@@ -153,41 +153,6 @@ export async function setApplicationStatus(_: State, fd: FormData): Promise<Stat
   })
 }
 
-/* ───────────── Interviews ───────────── */
-
-export async function saveInterview(_: State, fd: FormData): Promise<State> {
-  return attempt(async () => {
-    const id = oid(fd, 'id')
-    const me = await currentUser()
-    if (!me) throw new Invalid('Your session has expired. Sign in again.')
-    if (!me.student && !can(me, id ? 'interviews.edit' : 'interviews.create')) throw new Invalid('You do not have permission to do that.')
-    const app = await Application.findOne({ _id: oid(fd, 'application'), ...(me.student ? { student: me.student } : {}) }).lean()
-    if (!app) throw new Invalid('Choose one of the applications.')
-    if (!me.student) await assertStudentAccess(me, app.student)
-    const at = date(fd, 'at')
-    if (!at) throw new Invalid('Choose the interview date and time.')
-    const doc = {
-      application: app._id, student: app.student, company: app.company, role: app.role, round: need(fd, 'round', 'Interview round', 80), at,
-      mode: oneOf(fd, 'mode', ['Online', 'Onsite', 'Telephonic'] as const, 'Online'), link: link(fd, 'link'),
-      status: oneOf(fd, 'status', ['scheduled', 'completed', 'cancelled', 'no-show'] as const, 'scheduled'),
-      result: oneOf(fd, 'result', ['pending', 'cleared', 'rejected', 'on-hold'] as const, 'pending'),
-      feedback: str(fd, 'feedback', 2000), remarks: str(fd, 'remarks', 1000),
-    }
-    if (id) {
-      const before = await Interview.findOne({ _id: id, ...(me.student ? { student: me.student } : {}) }).lean()
-      if (!before) throw new Invalid('Interview not found.')
-      await Interview.updateOne({ _id: id }, { $set: { ...doc, ...(+before.at !== +at ? { reminded: false } : {}) } })
-      await audit(me, 'interviews', 'interview.update', id, before, doc)
-    } else {
-      const i = await Interview.create({ ...doc, createdBy: me._id })
-      await audit(me, 'interviews', 'interview.create', i._id, undefined, doc)
-      if (!me.student) await notifyStudents([app.student], { title: `Interview scheduled: ${app.company} — ${doc.round}`, body: `${at.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })} · ${doc.mode}`, link: '/me/interviews' })
-    }
-    revalidatePath('/interviews')
-    revalidatePath('/me/interviews')
-    return { ok: 'Interview saved.' }
-  })
-}
 
 
 /** Student answers "Status of the candidate for this drive" for a published opportunity (open or closed). */

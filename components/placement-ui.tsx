@@ -2,7 +2,7 @@ import { Field, Badge, Empty } from './ui'
 import { ActionForm } from './form'
 import { dayTime, isoDay } from '@/lib/format'
 import { statusTone } from '@/lib/placement'
-import { saveApplication, saveInterview, setApplicationStatus } from '@/app/actions/placement'
+import { saveApplication, setApplicationStatus } from '@/app/actions/placement'
 import type { Opt } from '@/lib/options'
 
 type App = { _id?: unknown; company?: string; role?: string; link?: string | null; appliedOn?: Date | null; source?: string | null; status?: string; remarks?: string | null; job?: unknown; docs?: { title?: string | null; url?: string | null }[] }
@@ -65,32 +65,8 @@ export function AppTimeline({ history }: { history: H[] }) {
   )
 }
 
-type I = { _id?: unknown; application?: unknown; round?: string; at?: Date; mode?: string | null; link?: string | null; status?: string | null; result?: string | null; feedback?: string | null; remarks?: string | null }
-export function InterviewFields({ i, apps }: { i?: I; apps: Opt[] }) {
-  const local = i?.at ? new Date(+i.at + 5.5 * 3600_000).toISOString().slice(0, 16) : ''
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {i?._id ? <input type="hidden" name="id" value={String(i._id)} /> : null}
-      <Field label="Application *" className="sm:col-span-2"><select name="application" required defaultValue={i?.application ? String(i.application) : ''} className="input"><option value="">Choose…</option>{apps.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
-      <Field label="Round *"><input name="round" required defaultValue={i?.round} list="rounds" className="input" /></Field>
-      <datalist id="rounds">{['Online Test', 'Group Discussion', 'Technical Round 1', 'Technical Round 2', 'Managerial', 'HR'].map(r => <option key={r} value={r} />)}</datalist>
-      <Field label="Date & time (IST) *"><input name="at" type="datetime-local" required defaultValue={local} className="input" /></Field>
-      <Field label="Mode"><select name="mode" defaultValue={i?.mode ?? 'Online'} className="input"><option>Online</option><option>Onsite</option><option>Telephonic</option></select></Field>
-      <Field label="Meeting link"><input name="link" type="url" defaultValue={i?.link ?? ''} className="input" /></Field>
-      <Field label="Status"><select name="status" defaultValue={i?.status ?? 'scheduled'} className="input">{['scheduled', 'completed', 'cancelled', 'no-show'].map(s => <option key={s}>{s}</option>)}</select></Field>
-      <Field label="Result"><select name="result" defaultValue={i?.result ?? 'pending'} className="input">{['pending', 'cleared', 'rejected', 'on-hold'].map(s => <option key={s}>{s}</option>)}</select></Field>
-      <Field label="Feedback" className="sm:col-span-2"><textarea name="feedback" rows={2} defaultValue={i?.feedback ?? ''} className="input" /></Field>
-      <Field label="Remarks" className="sm:col-span-2"><input name="remarks" defaultValue={i?.remarks ?? ''} className="input" /></Field>
-    </div>
-  )
-}
-
-export function InterviewForm({ i, apps, submit = 'Save interview' }: { i?: I; apps: Opt[]; submit?: string }) {
-  return <ActionForm action={saveInterview} submit={submit} reset={!i}><InterviewFields i={i} apps={apps} /></ActionForm>
-}
 
 export function ApplicationForm({ a, statuses, students, submit = 'Save application' }: { a?: App; statuses: readonly string[]; students?: Opt[]; submit?: string }) {
   return <ActionForm action={saveApplication} submit={submit} reset={!a}><ApplicationFields a={a} statuses={statuses} students={students} /></ActionForm>
 }
 
-export const resultTone = (r?: string | null) => (r === 'cleared' ? 'green' : r === 'rejected' ? 'red' : r === 'on-hold' ? 'amber' : 'zinc') as 'green' | 'red' | 'amber' | 'zinc'

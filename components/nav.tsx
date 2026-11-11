@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3, Bell, BookOpen, Code2, Inbox, MessageSquareHeart, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
-  GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users, Video,
+  GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users,
 } from 'lucide-react'
 import { hasPerm, type Perm } from '@/lib/rbac'
 
@@ -35,7 +35,6 @@ const ADMIN: { group: string; items: Item[] }[] = [
       { href: '/companies', label: 'Companies', icon: Building2, perm: 'companies.view' },
       { href: '/jobs', label: 'Job Opportunities', icon: Briefcase, perm: 'jobs.view' },
       { href: '/applications', label: 'Applications', icon: ClipboardList, perm: 'applications.view' },
-      { href: '/interviews', label: 'Interviews', icon: Video, perm: 'interviews.view' },
       { href: '/placement', label: 'Placement Analytics', icon: Trophy, perm: 'applications.view' },
     ],
   },
@@ -63,7 +62,6 @@ const STUDENT: Item[] = [
   { href: '/me/contests', label: 'Contest Leaderboard', icon: BarChart3 },
   { href: '/me/jobs', label: 'Job Opportunities', icon: Briefcase },
   { href: '/me/applications', label: 'My Applications', icon: ClipboardList },
-  { href: '/me/interviews', label: 'My Interviews', icon: Video },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/account', label: 'Change Password', icon: KeyRound },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },

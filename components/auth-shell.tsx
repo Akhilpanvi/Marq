@@ -23,7 +23,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <p className="mt-6 text-lg font-medium text-white">{FULL_NAME}</p>
           <p className="mt-1 text-sm tracking-wide text-zinc-400">{TAGLINE}</p>
           <ul className="mt-12 grid max-w-md grid-cols-2 gap-x-6 gap-y-3 text-sm text-zinc-300">
-            {['Training & attendance', 'Assessments & coding', 'Performance intelligence', 'Mentorship', 'Applications & interviews', 'Placement outcomes'].map(t => (
+            {['Training & attendance', 'Assessments & coding', 'Performance intelligence', 'Mentorship', 'Company drives & applications', 'Placement outcomes'].map(t => (
               <li key={t} className="flex items-center gap-2"><span className="size-1.5 rounded-full bg-[var(--marq-a)]" />{t}</li>
             ))}
           </ul>

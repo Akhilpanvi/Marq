@@ -2,30 +2,33 @@
 
 export const CATEGORIES = [
   'Technical', 'Programming', 'Data Structures & Algorithms', 'Aptitude', 'Logical Reasoning',
-  'Verbal Ability', 'Communication Skills', 'Coding', 'Domain-Specific', 'Mock Interview',
+  'Verbal Ability', 'Communication Skills', 'Coding', 'Domain-Specific',
 ] as const
 
-export const DIMENSIONS = { technical: 'Technical', coding: 'Coding', aptitude: 'Aptitude', communication: 'Communication', interview: 'Interview', attendance: 'Attendance' } as const
+// Scores use objective data only — nothing depends on trainer or mentor judgement.
+export const DIMENSIONS = { coding: 'Coding profiles', github: 'GitHub', assessments: 'Assessments', attendance: 'Attendance' } as const
 export type Dim = keyof typeof DIMENSIONS
 
 export type ScoringConfig = {
-  categoryDim: Record<string, Exclude<Dim, 'attendance'>>
   overall: Record<Dim, number>
   readiness: Record<Dim, number>
+  /** points that earn the full 100 for coding profiles and GitHub */
+  targets: { codingPoints: number; githubPoints: number }
   thresholds: { high: number; attention: number; attendance: number; trend: number }
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
-  categoryDim: {
-    Technical: 'technical', 'Domain-Specific': 'technical',
-    Programming: 'coding', 'Data Structures & Algorithms': 'coding', Coding: 'coding',
-    Aptitude: 'aptitude', 'Logical Reasoning': 'aptitude', 'Verbal Ability': 'aptitude',
-    'Communication Skills': 'communication', 'Mock Interview': 'interview',
-  },
-  overall: { technical: 20, coding: 25, aptitude: 15, communication: 15, interview: 10, attendance: 15 },
-  readiness: { technical: 20, coding: 30, aptitude: 10, communication: 15, interview: 20, attendance: 5 },
+  overall: { coding: 40, github: 25, assessments: 20, attendance: 15 },
+  readiness: { coding: 45, github: 20, assessments: 25, attendance: 10 },
+  targets: { codingPoints: 20000, githubPoints: 400 },
   thresholds: { high: 75, attention: 50, attendance: 75, trend: 2 },
 }
+
+export type GithubStats = { repos?: number | null; stars?: number | null; contributions?: number | null }
+/** GitHub points = contributions in the last year + public repos × 10 + stars × 5 */
+export const githubPoints = (g: GithubStats) => (g.contributions ?? 0) + (g.repos ?? 0) * 10 + (g.stars ?? 0) * 5
+export const toScore = (points: number, target: number) => Math.min(100, Math.max(0, target > 0 ? (points / target) * 100 : 0))
+export type Dev = { codingPoints?: number | null; github?: GithubStats | null }
 
 export type ResultPoint = { category: string; date: Date | string; marks: number | null; max: number }
 export type AttendanceCounts = { present: number; absent: number; late: number; excused: number }
@@ -64,20 +67,20 @@ export function slope(ys: number[], n = 6) {
 
 export type Profile = ReturnType<typeof profile>
 
-export function profile(results: ResultPoint[], att: Partial<AttendanceCounts> | undefined, cfg: ScoringConfig = DEFAULT_SCORING) {
+export function profile(results: ResultPoint[], att: Partial<AttendanceCounts> | undefined, cfg: ScoringConfig = DEFAULT_SCORING, dev: Dev = {}) {
   // ponytail: absent (marks null) is excluded from averages; attendance already penalises missed sessions
   const taken = results.filter(r => r.marks != null && r.max > 0).sort((a, b) => +new Date(a.date) - +new Date(b.date))
   const pctOf = (r: ResultPoint) => (r.marks! / r.max) * 100
-  const byDim: Partial<Record<Dim, number[]>> = {}
-  for (const r of taken) {
-    const d = cfg.categoryDim[r.category]
-    if (d) (byDim[d] ??= []).push(pctOf(r))
-  }
-  const dims: Record<Dim, number | null> = {
-    technical: mean(byDim.technical ?? []), coding: mean(byDim.coding ?? []), aptitude: mean(byDim.aptitude ?? []),
-    communication: mean(byDim.communication ?? []), interview: mean(byDim.interview ?? []), attendance: attendancePct(att),
-  }
   const series = taken.map(pctOf)
+  const cat = new Map<string, number[]>()
+  for (const r of taken) (cat.get(r.category) ?? cat.set(r.category, []).get(r.category)!).push(pctOf(r))
+  const gh = dev.github ? githubPoints(dev.github) : null
+  const dims: Record<Dim, number | null> = {
+    coding: dev.codingPoints == null ? null : toScore(dev.codingPoints, cfg.targets.codingPoints),
+    github: gh == null ? null : toScore(gh, cfg.targets.githubPoints),
+    assessments: mean(series),
+    attendance: attendancePct(att),
+  }
   const overall = weighted(dims, cfg.overall)
   const readiness = weighted(dims, cfg.readiness)
   const trend = slope(series)
@@ -88,7 +91,12 @@ export function profile(results: ResultPoint[], att: Partial<AttendanceCounts> |
     declining: trend != null && trend <= -t.trend,
     attention: (overall.score != null && overall.score < t.attention) || (dims.attendance != null && dims.attendance < t.attendance),
   }
-  return { dims, overall: overall.score, coverage: overall.coverage, readiness: readiness.score, assessmentAvg: mean(series), assessments: taken.length, absences: results.length - taken.length, trend, flags }
+  return {
+    dims, overall: overall.score, coverage: overall.coverage, readiness: readiness.score,
+    assessmentAvg: mean(series), assessments: taken.length, absences: results.length - taken.length, trend, flags,
+    codingPoints: dev.codingPoints ?? null, githubPoints: gh,
+    byCategory: Object.fromEntries([...cat].map(([k, xs]) => [k, mean(xs)!])) as Record<string, number>,
+  }
 }
 
 const istDay = (d: Date | string) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })

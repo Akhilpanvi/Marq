@@ -1,6 +1,6 @@
 import { can, requirePage } from '@/lib/auth'
 import { getScoring } from '@/lib/settings'
-import { CATEGORIES, DIMENSIONS, type Dim } from '@/lib/scoring'
+import { DIMENSIONS, type Dim } from '@/lib/scoring'
 import { APP_STATUSES } from '@/lib/placement'
 import { Setting } from '@/models'
 import { Card, Field, PageHeader } from '@/components/ui'
@@ -25,21 +25,15 @@ export default async function SettingsPage() {
             <fieldset disabled={!edit} className="space-y-6">
               <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full text-sm">
-                  <thead className="bg-subtle/60"><tr><th className="th">Dimension</th><th className="th">Overall weight</th><th className="th">Readiness weight</th></tr></thead>
+                  <thead className="bg-subtle/60"><tr><th className="th">Part</th><th className="th">Overall weight</th><th className="th">Readiness weight</th></tr></thead>
                   <tbody className="divide-y divide-line">
                     {dims.map(([k, l]) => <tr key={k}><td className="td font-medium">{l}</td><td className="td"><input name={`o_${k}`} type="number" min={0} max={100} defaultValue={cfg.overall[k]} className="input w-24" /></td><td className="td"><input name={`r_${k}`} type="number" min={0} max={100} defaultValue={cfg.readiness[k]} className="input w-24" /></td></tr>)}
                   </tbody>
                 </table>
               </div>
-              <div>
-                <span className="label">Which dimension each assessment category feeds</span>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {CATEGORIES.map(c => (
-                    <label key={c} className="text-sm"><span className="text-muted">{c}</span>
-                      <select name={`c_${c}`} defaultValue={cfg.categoryDim[c] ?? ''} className="input mt-1">{dims.filter(([k]) => k !== 'attendance').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-                    </label>
-                  ))}
-                </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Coding profiles: full 100 at (coding points)" hint="LeetCode + CodeChef + Codeforces points that earn the full score."><input name="target_coding" type="number" min={1} defaultValue={cfg.targets.codingPoints} className="input" /></Field>
+                <Field label="GitHub: full 100 at (GitHub points)" hint="Contributions in the last year + repos × 10 + stars × 5."><input name="target_github" type="number" min={1} defaultValue={cfg.targets.githubPoints} className="input" /></Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-4">
                 <Field label="High performer ≥"><input name="t_high" type="number" min={0} max={100} defaultValue={cfg.thresholds.high} className="input" /></Field>

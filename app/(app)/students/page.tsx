@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { avatarSrc } from '@/lib/avatar'
 import { Download, Plus, Upload } from 'lucide-react'
 import { can, requirePage, studentScope } from '@/lib/auth'
 import { batchOptions, mentorOptions } from '@/lib/options'
@@ -26,7 +27,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (dept) filter.department = dept
 
   const [students, total, batches, mentors, departments] = await Promise.all([
-    Student.find(filter).select('-photo.data').sort({ regNo: 1 }).skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean(),
+    Student.find(filter).sort({ regNo: 1 }).skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean(),
     Student.countDocuments(filter),
     batchOptions(),
     mentorOptions(),
@@ -72,7 +73,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                 <td className="td w-8">{(canEdit || canAccounts) && <input type="checkbox" name="ids" value={String(s._id)} form="bulk" aria-label={`Select ${s.name}`} className="size-4 accent-brand-600" />}</td>
                 <td className="td">
                   <Link href={`/students/${s._id}`} className="flex items-center gap-2.5">
-                    <Avatar name={s.name} src={s.photo?.type ? `/api/students/${s._id}/photo` : null} size="size-8" />
+                    <Avatar name={s.name} src={avatarSrc(s)} size="size-8" />
                     <span className="min-w-0"><span className="block truncate font-medium hover:underline">{s.name}</span><span className="block font-mono text-xs text-muted">{s.regNo}</span></span>
                   </Link>
                 </td>

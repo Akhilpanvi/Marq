@@ -1,14 +1,13 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { audit, guard } from '@/lib/auth'
-import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, REGNO, str, type State } from '@/lib/form'
+import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, photoLink, REGNO, str, type State } from '@/lib/form'
 import { normalise, readSheet } from '@/lib/sheet'
 import { issueLink } from '@/lib/tokens'
 import { hasPerm } from '@/lib/rbac'
 import { Application, Attendance, AssessmentResult, Batch, Role, Student, User } from '@/models'
 
 const STATUSES = ['active', 'on_hold', 'withdrawn', 'completed'] as const
-const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export async function saveStudent(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
@@ -28,17 +27,12 @@ export async function saveStudent(_: State, fd: FormData): Promise<State> {
       batch: oid(fd, 'batch') ?? null, mentor: oid(fd, 'mentor') ?? null,
       status: oneOf(fd, 'status', STATUSES, 'active'),
     }
-    const photo = fd.get('photo')
-    if (photo instanceof File && photo.size) {
-      if (!PHOTO_TYPES.includes(photo.type)) throw new Invalid('Profile picture must be JPEG, PNG or WebP.')
-      if (photo.size > 300 * 1024) throw new Invalid('Profile picture must be under 300 KB.')
-      set.photo = { data: Buffer.from(await photo.arrayBuffer()), type: photo.type }
-    }
+    set.photoUrl = photoLink(fd)
     if (id) {
-      const before = await Student.findById(id).select('-photo').lean()
+      const before = await Student.findById(id).lean()
       if (!before) throw new Invalid('Student not found.')
       await Student.updateOne({ _id: id }, { $set: set })
-      await audit(me, 'students', 'student.update', id, before, { ...set, photo: undefined })
+      await audit(me, 'students', 'student.update', id, before, set)
       revalidatePath(`/students/${id}`)
     } else {
       const s = await Student.create(set)
@@ -53,7 +47,7 @@ export async function deleteStudent(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const me = await guard('students.delete')
     const id = oid(fd, 'id')
-    const s = await Student.findById(id).select('-photo').lean()
+    const s = await Student.findById(id).lean()
     if (!s) throw new Invalid('Student not found.')
     const history = (await Attendance.exists({ student: id })) || (await AssessmentResult.exists({ student: id })) || (await Application.exists({ student: id }))
     if (history) throw new Invalid('This student has training or placement history. Set their status to Withdrawn instead, so records stay intact.')
@@ -119,12 +113,12 @@ export async function createAccounts(_: State, fd: FormData): Promise<State> {
 /* ───────────── Bulk import ───────────── */
 
 const ALIASES = {
-  regNo: ['registration number', 'reg no', 'regno', 'reg. no', 'registration no', 'student id', 'id no'],
+  regNo: ['registration number', 'reg no', 'regno', 'reg. no', 'registration no', 'student id', 'student id no', 'student id number', 'id no', 'id number', 'roll no', 'roll number'],
   name: ['full name', 'student name'],
-  email: ['university email', 'college email', 'official email', 'email id'],
+  email: ['university email', 'college email', 'official email', 'email id', 'kl email', 'university mail id'],
   personalEmail: ['placement mail id', 'placement email', 'placement email id', 'personal email'],
   phone: ['mobile', 'mobile number', 'phone number', 'contact'],
-  department: ['dept', 'branch'],
+  department: ['dept', 'branch', 'parent branch'],
   specialization: ['specialisation', 'stream'],
   year: ['academic year', 'yr'],
   section: ['sec'],
@@ -135,8 +129,20 @@ const ALIASES = {
 
 export type ImportRow = { row: number; data: Record<string, string>; outcome: 'create' | 'update' | 'duplicate' | 'error' | 'skip'; errors: string[] }
 
+/** The Top Notch roster uses "Parent Branch" (CSE) + "Branch" (CSE-H/AI&DS…): then Branch is the specialization. */
+function importAliases(raw: Record<string, string>[]) {
+  const heads = new Set(Object.keys(raw[0] ?? {}).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, '')))
+  if (!heads.has('parentbranch')) return ALIASES
+  return { ...ALIASES, department: ['dept', 'parent branch'], specialization: [...ALIASES.specialization, 'branch'] }
+}
+
+/** University email defaults to <regno>@kluniversity.in when the sheet has no email column/value. */
+const UNI_DOMAIN = 'kluniversity.in'
+
 async function validateImport(fd: FormData) {
-  const rows = normalise(await readSheet(fd.get('file')), ALIASES)
+  const raw = await readSheet(fd.get('file'))
+  const rows = normalise(raw, importAliases(raw)).filter(r => Object.values(r).some(Boolean))
+  for (const r of rows) if (!r.email && r.regNo && REGNO.test(r.regNo)) r.email = `${r.regNo.toLowerCase()}@${UNI_DOMAIN}`
   if (!rows.length) throw new Invalid('The file has no data rows.')
   const allowUpdate = fd.get('update') === 'on'
   const [batches, mentors, existing] = await Promise.all([

@@ -6,7 +6,7 @@ import { appMetrics } from '@/lib/app-metrics'
 import { attendancePct } from '@/lib/scoring'
 import { visibleBatches } from '@/lib/scope'
 import { ago, day, pct } from '@/lib/format'
-import { Assessment, AuditLog, Batch, Company, Interview, Student, TrainingSession, User, Attendance } from '@/models'
+import { Assessment, AuditLog, Batch, Company, Job, Student, TrainingSession, User, Attendance } from '@/models'
 import { Badge, Card, Empty, Grid, PageHeader, Score, Stat, Table } from '@/components/ui'
 import { Bars, Lines } from '@/components/charts'
 import { MarqWordmark } from '@/components/logo'
@@ -22,7 +22,7 @@ export default async function Overview() {
   const ids = await scopedStudentIds(me)
   const sMatch = ids ? { student: { $in: ids } } : {}
   const batchScope = await visibleBatches(me)
-  const [students, prof, m, attMonthly, catAvg, conducted, upcomingSessions, upcomingInterviews, batches, recent] = await Promise.all([
+  const [students, prof, m, attMonthly, catAvg, conducted, upcomingSessions, batches, recent] = await Promise.all([
     can(me, 'students.view') ? Student.find(scope).select('name regNo status batch').lean() : [],
     can(me, 'performance.view') ? profiles(ids) : new Map(),
     can(me, 'applications.view') ? appMetrics(sMatch) : null,
@@ -32,7 +32,6 @@ export default async function Overview() {
     can(me, 'assessments.view') ? Assessment.aggregate<{ _id: string; avg: number }>([{ $lookup: { from: 'assessmentresults', localField: '_id', foreignField: 'assessment', as: 'r' } }, { $unwind: '$r' }, { $match: { 'r.marks': { $ne: null }, ...(ids ? { 'r.student': { $in: ids } } : {}) } }, { $group: { _id: '$category', avg: { $avg: { $multiply: [{ $divide: ['$r.marks', '$maxMarks'] }, 100] } } } }, { $sort: { avg: -1 } }]) : [],
     can(me, 'assessments.view') ? Assessment.countDocuments({ status: 'completed', ...(batchScope ? { batches: { $in: batchScope } } : {}) }) : 0,
     can(me, 'training.view') ? TrainingSession.find({ status: 'scheduled', date: { $gte: new Date(Date.now() - 12 * 3600_000) }, ...(batchScope ? { batch: { $in: batchScope } } : {}) }).select('title date start batch').sort({ date: 1 }).limit(6).lean() : [],
-    can(me, 'interviews.view') ? Interview.find({ ...sMatch, status: 'scheduled', at: { $gte: new Date() } }).sort({ at: 1 }).limit(6).lean() : [],
     Batch.find(batchScope ? { _id: { $in: batchScope } } : {}).select('name').lean(),
     can(me, 'audit.view') ? AuditLog.find().sort({ at: -1 }).limit(8).lean() : [],
   ])
@@ -49,7 +48,6 @@ export default async function Overview() {
     return { batch: b.name, overall: Math.round((mean(rs.map(r => r.p!.overall)) ?? 0) * 10) / 10, attendance: Math.round((mean(rs.map(r => r.p!.dims.attendance)) ?? 0) * 10) / 10 }
   }).filter(c => c.overall || c.attendance)
   const att = attMonthly.reduce((a, r) => ({ att: a.att + r.att, counted: a.counted + r.counted }), { att: 0, counted: 0 })
-  const sName = new Map(students.map(s => [String(s._id), s.name]))
   const bName = new Map(batches.map(b => [String(b._id), b.name]))
   const director = me.roleKey === 'director'
   const assistant = can(me, 'users.create') && can(me, 'students.create') && !can(me, 'training.create')
@@ -107,8 +105,7 @@ export default async function Overview() {
         <Card title="Coming up" icon={CalendarClock}>
           <ul className="space-y-3 text-sm">
             {upcomingSessions.map(s => <li key={String(s._id)}><Link href={`/training/sessions/${s._id}`} className="font-medium hover:underline">{s.title}</Link><div className="text-xs text-muted">Session · {bName.get(String(s.batch))} · {day(s.date)}{s.start ? ` ${s.start}` : ''}</div></li>)}
-            {upcomingInterviews.map(i => <li key={String(i._id)}><span className="font-medium">{sName.get(String(i.student)) ?? 'Student'}</span> — {i.company}<div className="text-xs text-muted">Interview · {i.round} · {day(i.at)}</div></li>)}
-            {!upcomingSessions.length && !upcomingInterviews.length && <li className="text-muted">Nothing scheduled.</li>}
+            {!upcomingSessions.length && <li className="text-muted">Nothing scheduled.</li>}
           </ul>
         </Card>
       </div>
@@ -123,8 +120,8 @@ export default async function Overview() {
 }
 
 async function DirectorExtras() {
-  const [companies, selected] = await Promise.all([Company.countDocuments(), Interview.countDocuments({ result: 'cleared' })])
-  return <p className="mt-3 text-sm text-muted">{companies} companies participating · {selected} interview rounds cleared</p>
+  const [companies, open] = await Promise.all([Company.countDocuments(), Job.countDocuments({ status: 'open' })])
+  return <p className="mt-3 text-sm text-muted">{companies} companies participating · {open} open drives</p>
 }
 
 async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {

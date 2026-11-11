@@ -4,9 +4,9 @@ import { requirePage, scopedStudentIds } from '@/lib/auth'
 import { appMetrics } from '@/lib/app-metrics'
 import { OFFERED, REJECTED } from '@/lib/placement'
 import { pct } from '@/lib/format'
-import { Application, Interview, Job, Student } from '@/models'
+import { Application, Job, Student } from '@/models'
 import { Card, Grid, PageHeader, Stat, Table, Empty } from '@/components/ui'
-import { Bars, Donut } from '@/components/charts'
+import { Bars } from '@/components/charts'
 import { AppMetricTiles } from '@/components/app-metrics'
 
 export const metadata = { title: 'Placement Analytics' }
@@ -16,7 +16,7 @@ export default async function PlacementPage() {
   const ids = await scopedStudentIds(me)
   const match: Record<string, unknown> = ids ? { student: { $in: ids } } : {}
   const sMatch = ids ? { _id: { $in: ids } } : {}
-  const [m, students, placed, offered, byCompany, monthly, interviews, packages, topStudents] = await Promise.all([
+  const [m, students, placed, offered, byCompany, monthly, packages, topStudents] = await Promise.all([
     appMetrics(match),
     Student.countDocuments({ ...sMatch, status: { $ne: 'withdrawn' } }),
     Application.distinct('student', { ...match, status: 'Accepted' }),
@@ -27,7 +27,6 @@ export default async function PlacementPage() {
       { $sort: { apps: -1 } }, { $limit: 30 },
     ]),
     Application.aggregate<{ _id: string; n: number }>([{ $match: match }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: { $ifNull: ['$appliedOn', '$createdAt'] }, timezone: 'Asia/Kolkata' } }, n: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-    Interview.aggregate<{ _id: string; n: number }>([{ $match: { ...match, status: 'completed' } }, { $group: { _id: '$result', n: { $sum: 1 } } }]),
     Application.aggregate<{ _id: null; max: number; avg: number; n: number }>([
       { $match: { ...match, status: 'Accepted', job: { $ne: null } } },
       { $lookup: { from: 'jobs', localField: 'job', foreignField: '_id', as: 'j' } }, { $unwind: '$j' }, { $match: { 'j.ctc': { $gt: 0 } } },
@@ -42,17 +41,16 @@ export default async function PlacementPage() {
   const funnel = [
     { stage: 'Applied', n: m.total },
     { stage: 'Written test', n: m.written },
-    { stage: 'Technical', n: m.technical },
-    { stage: 'HR', n: m.hr },
+    { stage: 'Technical round', n: m.technical },
+    { stage: 'HR round', n: m.hr },
     { stage: 'Offers', n: m.offers },
     { stage: 'Accepted', n: m.accepted },
   ]
-  const results = interviews.map(i => ({ name: i._id, value: i.n }))
   const pk = packages[0]
 
   return (
     <>
-      <PageHeader title="Placement Analytics" description="Built from recorded applications, interviews and offers." />
+      <PageHeader title="Placement Analytics" description="Built from students’ drive status answers, applications and offers." />
       <Grid>
         <Stat label="Students placed" value={placed.length} hint={`${pct(students ? (placed.length / students) * 100 : null)} of ${students}`} />
         <Stat label="Students with offers" value={offered.length} />
@@ -60,10 +58,7 @@ export default async function PlacementPage() {
         <Stat label="Open opportunities" value={openJobs} />
       </Grid>
       <div className="my-6"><AppMetricTiles m={m} /></div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Stage counts (current status)" className="lg:col-span-2"><Bars data={funnel} x="stage" series={[{ key: 'n', label: 'Applications' }]} height={240} /></Card>
-        <Card title="Interview outcomes"><Donut data={results} /></Card>
-      </div>
+      <Card title="Stage counts (current status)"><Bars data={funnel} x="stage" series={[{ key: 'n', label: 'Applications' }]} height={240} /></Card>
       <Card title="Applications per month" className="my-6"><Bars data={monthly.map(x => ({ month: x._id, n: x.n }))} x="month" series={[{ key: 'n', label: 'Applications' }]} height={220} /></Card>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Company-wise recruitment" className="lg:col-span-2" pad={false}>

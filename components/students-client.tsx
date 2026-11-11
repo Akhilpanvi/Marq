@@ -55,6 +55,7 @@ export function ImportWizard({ canUpdate }: { canUpdate: boolean }) {
       <div className="card space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-3">
           <a href="/api/students/template" className="btn-outline"><Download className="size-4" />1. Download template</a>
+          <a href="/api/students/template?sample=1" className="btn-ghost"><Download className="size-4" />Sample with examples</a>
           <label className="btn-outline cursor-pointer"><Upload className="size-4" />2. {file ? file.name : 'Choose .xlsx / .csv'}
             <input type="file" accept=".xlsx,.csv" className="sr-only" onChange={e => setFile(e.currentTarget.files?.[0] ?? null)} />
           </label>

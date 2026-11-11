@@ -13,7 +13,14 @@ async function get<T>(key: string, fallback: T): Promise<T> {
 
 export const getScoring = cache(async (): Promise<ScoringConfig> => {
   const v = await get<Partial<ScoringConfig>>('scoring', {})
-  return { ...DEFAULT_SCORING, ...v, thresholds: { ...DEFAULT_SCORING.thresholds, ...v.thresholds } }
+  // weights saved under the old six-dimension model are ignored in favour of the new defaults
+  const fits = (w?: Record<string, number>) => !!w && 'github' in w && 'assessments' in w
+  return {
+    overall: fits(v.overall) ? v.overall! : DEFAULT_SCORING.overall,
+    readiness: fits(v.readiness) ? v.readiness! : DEFAULT_SCORING.readiness,
+    targets: { ...DEFAULT_SCORING.targets, ...v.targets },
+    thresholds: { ...DEFAULT_SCORING.thresholds, ...v.thresholds },
+  }
 })
 
 /** Built-in statuses plus any an administrator added in Settings. */

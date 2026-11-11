@@ -12,7 +12,6 @@ export const MODULES = {
   companies: 'Companies',
   jobs: 'Job Opportunities',
   applications: 'Applications',
-  interviews: 'Interviews',
   reports: 'Reports',
   announcements: 'Announcements',
   audit: 'Audit Logs',
@@ -39,10 +38,10 @@ const view = (...ms: Module[]) => ms.map(m => `${m}.view` as Perm)
 export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 'student'; perms: Perm[]; description: string }[] = [
   { key: 'superadmin', name: 'Super Administrator', scope: 'all', perms: ['*'], description: 'Complete platform control.' },
   {
-    key: 'placement_admin', name: 'Placement Admin', scope: 'all', description: 'Runs the programme day to day: students, accounts, daily register, companies, drives, applications, interviews, announcements and feedback.',
+    key: 'placement_admin', name: 'Placement Admin', scope: 'all', description: 'Runs the programme day to day: students, accounts, daily register, companies, drives, applications, announcements and feedback.',
     perms: [
       ...all('students'), ...all('users', 'view', 'create', 'edit'), ...all('attendance', 'view', 'create'), ...all('announcements'), ...all('feedback', 'view', 'edit'),
-      ...all('companies'), ...all('jobs'), ...all('applications'), ...all('interviews'), ...all('reports', 'view', 'export'),
+      ...all('companies'), ...all('jobs'), ...all('applications'), ...all('reports', 'view', 'export'),
       ...view('training', 'assessments', 'performance', 'mentorship'),
     ],
   },
@@ -53,7 +52,7 @@ export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 
   },
   {
     key: 'mentor', name: 'Mentor', scope: 'assigned', description: 'Assigned students: evaluations, feedback and progress.',
-    perms: [...view('students', 'performance', 'attendance', 'assessments', 'applications', 'interviews', 'training'), ...all('mentorship', 'view', 'create', 'edit'), 'reports.view'],
+    perms: [...view('students', 'performance', 'attendance', 'assessments', 'applications', 'training'), ...all('mentorship', 'view', 'create', 'edit'), 'reports.view'],
   },
   {
     key: 'trainer', name: 'Trainer', scope: 'assigned', description: 'Own batches: sessions, attendance, assessment marks and feedback.',
