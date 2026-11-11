@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { cookieName, verify } from '@/lib/session'
 
 // Optimistic gate only: every page and action re-verifies the user and their permissions against MongoDB.
-const PUBLIC = ['/login', '/activate', '/forgot-password']
+const PUBLIC = ['/login', '/activate', '/forgot-password', '/change-password', '/register', '/feedback']
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl

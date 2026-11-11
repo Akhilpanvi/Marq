@@ -1,12 +1,12 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { audit, guard } from '@/lib/auth'
-import { attempt, date, Invalid, need, num, oid, oids, oneOf, str, type State } from '@/lib/form'
+import { attempt, Invalid, need, num, oid, oids, oneOf, str, type State } from '@/lib/form'
 import { DEFAULT_SCORING, DIMENSIONS, CATEGORIES, type Dim } from '@/lib/scoring'
 import { APP_STATUSES } from '@/lib/placement'
 import { getScoring, putSetting } from '@/lib/settings'
 import { notifyUsers } from '@/lib/notify'
-import { Announcement, FinancialRecord, Role, Student, User } from '@/models'
+import { Announcement, Role, Student, User } from '@/models'
 
 /* ───────────── Announcements ───────────── */
 
@@ -40,69 +40,6 @@ export async function deleteAnnouncement(_: State, fd: FormData): Promise<State>
     await audit(me, 'announcements', 'announcement.delete', a._id, a)
     revalidatePath('/announcements')
     return { ok: 'Announcement removed (notifications already delivered stay in inboxes).' }
-  })
-}
-
-/* ───────────── Financial records ───────────── */
-
-export async function saveFinance(_: State, fd: FormData): Promise<State> {
-  return attempt(async () => {
-    const id = oid(fd, 'id')
-    const me = await guard(id ? 'finance.edit' : 'finance.create')
-    const when = date(fd, 'date')
-    if (!when) throw new Invalid('Choose a date.')
-    const doc = { date: when, category: need(fd, 'category', 'Category', 80), description: need(fd, 'description', 'Description', 500), amount: num(fd, 'amount', { min: 0, max: 1e9, label: 'Amount' }) ?? 0, vendor: str(fd, 'vendor', 120), reference: str(fd, 'reference', 120), program: oid(fd, 'program') ?? null }
-    if (!doc.amount) throw new Invalid('Enter the amount.')
-    if (id) {
-      const before = await FinancialRecord.findById(id).lean()
-      if (!before) throw new Invalid('Record not found.')
-      if (before.status === 'approved') throw new Invalid('Approved records are locked. Ask an approver to reject it first.')
-      await FinancialRecord.updateOne({ _id: id }, { $set: doc })
-      await audit(me, 'finance', 'finance.update', id, before, doc)
-    } else {
-      const r = await FinancialRecord.create({ ...doc, createdBy: me._id })
-      await audit(me, 'finance', 'finance.create', r._id, undefined, doc)
-    }
-    revalidatePath('/finance')
-    return { ok: 'Record saved — pending approval.' }
-  })
-}
-
-export async function decideFinance(_: State, fd: FormData): Promise<State> {
-  return attempt(async () => {
-    const me = await guard('finance.approve')
-    const status = oneOf(fd, 'status', ['approved', 'rejected', 'pending'] as const)
-    const before = await FinancialRecord.findById(oid(fd, 'id')).lean()
-    if (!before) throw new Invalid('Record not found.')
-    if (String(before.createdBy) === String(me._id) && status === 'approved' && !me.perms.includes('*')) throw new Invalid('You cannot approve a record you created.')
-    await FinancialRecord.updateOne({ _id: before._id }, { $set: { status, approvedBy: me._id } })
-    await audit(me, 'finance', `finance.${status}`, before._id, { status: before.status }, { status })
-    revalidatePath('/finance')
-    return { ok: `Marked ${status}.` }
-  })
-}
-
-export async function deleteFinance(_: State, fd: FormData): Promise<State> {
-  return attempt(async () => {
-    const me = await guard('finance.delete')
-    const r = await FinancialRecord.findById(oid(fd, 'id')).lean()
-    if (!r) throw new Invalid('Record not found.')
-    if (r.status === 'approved') throw new Invalid('Approved records cannot be deleted.')
-    await FinancialRecord.deleteOne({ _id: r._id })
-    await audit(me, 'finance', 'finance.delete', r._id, r)
-    revalidatePath('/finance')
-    return { ok: 'Record deleted.' }
-  })
-}
-
-export async function setBudget(_: State, fd: FormData): Promise<State> {
-  return attempt(async () => {
-    const me = await guard('finance.approve')
-    const amount = num(fd, 'budget', { min: 0, max: 1e10, label: 'Budget' }) ?? 0
-    await putSetting('budget', amount)
-    await audit(me, 'finance', 'budget.set', 'budget', undefined, { amount })
-    revalidatePath('/finance')
-    return { ok: 'Budget updated.' }
   })
 }
 

@@ -1,14 +1,13 @@
 import Link from 'next/link'
-import { AlertTriangle, Banknote, CalendarClock, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { can, requireUser, scopedStudentIds, studentScope } from '@/lib/auth'
 import { profiles } from '@/lib/intel'
 import { appMetrics } from '@/lib/app-metrics'
 import { attendancePct } from '@/lib/scoring'
 import { visibleBatches } from '@/lib/scope'
-import { getBudget } from '@/lib/settings'
-import { ago, day, inr, pct } from '@/lib/format'
-import { Assessment, AuditLog, Batch, Company, FinancialRecord, Interview, Student, TrainingSession, User, Attendance } from '@/models'
-import { Badge, Card, Empty, Grid, Meter, PageHeader, Score, Stat, Table } from '@/components/ui'
+import { ago, day, pct } from '@/lib/format'
+import { Assessment, AuditLog, Batch, Company, Interview, Student, TrainingSession, User, Attendance } from '@/models'
+import { Badge, Card, Empty, Grid, PageHeader, Score, Stat, Table } from '@/components/ui'
 import { Bars, Lines } from '@/components/charts'
 import { MarqWordmark } from '@/components/logo'
 
@@ -18,7 +17,6 @@ const mean = (xs: (number | null)[]) => { const v = xs.filter((x): x is number =
 export default async function Overview() {
   const me = await requireUser()
   if (me.student) return null
-  if (!can(me, 'students.view') && can(me, 'finance.view')) return <AccountsDashboard name={me.name} />
 
   const scope = await studentScope(me)
   const ids = await scopedStudentIds(me)
@@ -146,32 +144,5 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
       </div>
       <div className="mt-4 flex flex-wrap gap-2"><Link href="/attendance/register" className="btn-primary"><CalendarClock className="size-4" />Post today&apos;s attendance</Link><Link href="/students/import" className="btn-outline"><Upload className="size-4" />Bulk import students</Link><Link href="/users" className="btn-outline"><UserPlus className="size-4" />Manage accounts</Link></div>
     </Card>
-  )
-}
-
-async function AccountsDashboard({ name }: { name: string }) {
-  const [budget, byStatus, recent] = await Promise.all([
-    getBudget(),
-    FinancialRecord.aggregate<{ _id: string; amount: number; n: number }>([{ $group: { _id: '$status', amount: { $sum: '$amount' }, n: { $sum: 1 } } }]),
-    FinancialRecord.find().sort({ createdAt: -1 }).limit(8).lean(),
-  ])
-  const s = (k: string) => byStatus.find(x => x._id === k) ?? { amount: 0, n: 0 }
-  const spent = s('approved').amount
-  return (
-    <>
-      <PageHeader title="Accounts Overview" description={`Welcome, ${name.split(' ')[0]}. Authorised training expenditure for the Marquee programme.`}><Link href="/finance" className="btn-primary"><Banknote className="size-4" />Financial records</Link></PageHeader>
-      <Grid>
-        <Stat label="Approved budget" value={budget ? inr(budget) : '—'} />
-        <Stat label="Approved spend" value={inr(spent)} />
-        <Stat label="Pending approval" value={inr(s('pending').amount)} hint={`${s('pending').n} records`} href="/finance?status=pending" />
-        <Stat label="Remaining" value={budget ? inr(budget - spent) : '—'} />
-      </Grid>
-      {budget > 0 && <div className="card mt-4 p-4"><div className="mb-2 flex justify-between text-xs text-muted"><span>Budget utilisation</span><span>{Math.round((spent / budget) * 100)}%</span></div><Meter value={(spent / budget) * 100} tone="bg-[var(--color-c1)]" label="Budget utilisation" /></div>}
-      <Card title="Latest records" className="mt-6" pad={false}>
-        <Table head={['Date', 'Category', 'Description', 'Amount', 'Status']} empty={<Empty>No financial records yet.</Empty>}>
-          {recent.map(r => <tr key={String(r._id)}><td className="td text-muted">{day(r.date)}</td><td className="td">{r.category}</td><td className="td">{r.description}</td><td className="td tabular-nums">{inr(r.amount)}</td><td className="td"><Badge tone={r.status === 'approved' ? 'green' : r.status === 'rejected' ? 'red' : 'amber'}>{r.status}</Badge></td></tr>)}
-        </Table>
-      </Card>
-    </>
   )
 }

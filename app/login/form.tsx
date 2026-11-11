@@ -8,7 +8,7 @@ export function LoginForm() {
   return (
     <form onSubmit={e => (e.preventDefault(), start(() => run(new FormData(e.currentTarget))))} className="mt-8 space-y-4">
       <label className="block">
-        <span className="label">Email or Employee ID</span>
+        <span className="label">Email, username or ID</span>
         <input name="id" required maxLength={120} autoComplete="username" autoFocus className="input" placeholder="name@kluniversity.in" />
       </label>
       <label className="block">

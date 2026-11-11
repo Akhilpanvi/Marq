@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache'
 import type { Types } from 'mongoose'
 import { assertStudentAccess, audit, can, currentUser, guard, type Me } from '@/lib/auth'
 import { attempt, date, Invalid, link, list, need, num, oid, oneOf, str, type State } from '@/lib/form'
-import { appKey } from '@/lib/placement'
+import { appKey, DRIVE_OPTIONS } from '@/lib/placement'
 import { getStatuses } from '@/lib/settings'
 import { notifyStudents } from '@/lib/notify'
 import { Application, Company, Interview, Job, Student } from '@/models'
@@ -189,3 +189,26 @@ export async function saveInterview(_: State, fd: FormData): Promise<State> {
   })
 }
 
+
+/** Student answers "Status of the candidate for this drive" for a published opportunity (open or closed). */
+export async function setDriveStatus(_: State, fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await currentUser()
+    if (!me?.student) throw new Invalid('Only students report their own drive status.')
+    const job = await Job.findById(oid(fd, 'job')).populate<{ company: { name: string } }>('company', 'name').lean()
+    if (!job || job.status === 'draft') throw new Invalid('Opportunity not found.')
+    const status = oneOf(fd, 'status', DRIVE_OPTIONS.map(([, s]) => s))
+    const remarks = str(fd, 'remarks', 500)
+    const key = appKey(job.company.name, job.role)
+    const existing = await Application.findOne({ student: me.student, $or: [{ job: job._id }, { key }] }).lean()
+    if (!existing) {
+      await Application.create({ student: me.student, job: job._id, company: job.company.name, role: job.role, key, link: job.link, appliedOn: status === 'Not Applied' ? undefined : new Date(), source: 'MARQ', status, remarks, history: [entry(me, null, status, remarks)] })
+    } else if (existing.status !== status || remarks) {
+      await Application.updateOne({ _id: existing._id }, { $set: { status, ...(existing.job ? {} : { job: job._id }) }, $push: { history: entry(me, existing.status, status, remarks) } })
+    } else return { ok: 'No change.' }
+    await audit(me, 'applications', 'drive.status', job._id, { status: existing?.status ?? null }, { status })
+    revalidatePath('/me/jobs')
+    revalidatePath('/me/applications')
+    return { ok: `Saved: ${DRIVE_OPTIONS.find(([, s]) => s === status)![0]}.` }
+  })
+}

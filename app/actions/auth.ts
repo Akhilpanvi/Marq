@@ -1,5 +1,7 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import type { Types } from 'mongoose'
 import { after } from 'next/server'
 import { db } from '@/lib/db'
 import { audit, clientIp, currentUser, endSession, rateLimit, startSession } from '@/lib/auth'
@@ -11,20 +13,29 @@ import { User } from '@/models'
 
 const LOCK_AFTER = 5
 const LOCK_MS = 15 * 60_000
+const LOGIN_LIMIT = Number(process.env.LOGIN_RATE_LIMIT) || 30 // sign-in attempts per network per 10 min
+const USERNAME = /^[a-z0-9][a-z0-9._-]{2,29}$/
+
+/** Sign-in ID: email, employee/student ID, or a staff username. */
+const findLogin = (id: string) =>
+  User.findOne({ $or: [{ email: id }, { empId: id.toUpperCase() }, ...(USERNAME.test(id) ? [{ username: id }] : [])] }).select('+passwordHash status sessionVersion failedLogins lockedUntil name role')
+
+async function failed(user: { _id: Types.ObjectId; failedLogins: number }) {
+  await User.updateOne({ _id: user._id }, user.failedLogins + 1 >= LOCK_AFTER ? { $set: { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCK_MS) } } : { $inc: { failedLogins: 1 } })
+}
 
 export async function login(_: State, fd: FormData): Promise<State> {
   const id = str(fd, 'id', 120).toLowerCase()
   const password = String(fd.get('password') ?? '').slice(0, 128)
   if (!id || !password) return { error: 'Enter your email and password.' }
   await db()
-  if (!(await rateLimit(`login:${(await clientIp()) ?? 'unknown'}`, 30, 600))) return { error: 'Too many sign-in attempts from this network. Try again in 10 minutes.' }
+  if (!(await rateLimit(`login:${(await clientIp()) ?? 'unknown'}`, LOGIN_LIMIT, 600))) return { error: 'Too many sign-in attempts from this network. Try again in 10 minutes.' }
 
-  const user = await User.findOne({ $or: [{ email: id }, { empId: id.toUpperCase() }] }).select('+passwordHash status sessionVersion failedLogins lockedUntil name')
+  const user = await findLogin(id)
   if (user?.lockedUntil && user.lockedUntil > new Date()) return { error: 'Too many failed attempts. Try again in 15 minutes.' }
   const valid = await verifyPassword(password, user?.passwordHash) // runs even for unknown users: constant-ish timing
   if (!user || !valid) {
-    if (user)
-      await User.updateOne({ _id: user._id }, user.failedLogins + 1 >= LOCK_AFTER ? { $set: { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCK_MS) } } : { $inc: { failedLogins: 1 } })
+    if (user) await failed(user)
     return { error: 'Invalid credentials.' }
   }
   if (user.status !== 'active') return { error: user.status === 'invited' ? 'Activate your account using the link you were sent.' : 'This account is deactivated. Contact the programme office.' }
@@ -86,4 +97,50 @@ export async function requestReset(_: State, fd: FormData): Promise<State> {
   const user = await User.findOne({ email: id, status: 'active' }).select('name email').lean()
   if (user) after(() => issueLink(user, 'reset'))
   return { ok: 'If an account matches, a reset link has been emailed. It expires in 30 minutes.' }
+}
+
+/** From the sign-in page: change a password with the current one, then sign in. Same lockout and limits as login. */
+export async function changePasswordAtLogin(_: State, fd: FormData): Promise<State> {
+  const id = str(fd, 'id', 120).toLowerCase()
+  const [current, next, confirm] = ['current', 'next', 'confirm'].map(k => String(fd.get(k) ?? '').slice(0, 128))
+  if (!id || !current) return { error: 'Enter your sign-in ID and current password.' }
+  const issue = passwordIssue(next)
+  if (issue) return { error: issue }
+  if (next !== confirm) return { error: 'New passwords do not match.' }
+  if (next === current) return { error: 'Choose a password different from your current one.' }
+  await db()
+  if (!(await rateLimit(`login:${(await clientIp()) ?? 'unknown'}`, LOGIN_LIMIT, 600))) return { error: 'Too many attempts from this network. Try again in 10 minutes.' }
+  const user = await findLogin(id)
+  if (user?.lockedUntil && user.lockedUntil > new Date()) return { error: 'Too many failed attempts. Try again in 15 minutes.' }
+  const valid = await verifyPassword(current, user?.passwordHash)
+  if (!user || !valid) {
+    if (user) await failed(user)
+    return { error: 'Sign-in ID or current password is incorrect.' }
+  }
+  if (user.status !== 'active') return { error: 'This account is not active.' }
+  await User.updateOne({ _id: user._id }, { $set: { passwordHash: await hashPassword(next), failedLogins: 0, lastLoginAt: new Date() }, $unset: { lockedUntil: 1 }, $inc: { sessionVersion: 1 } })
+  await audit({ _id: user._id, name: user.name }, 'users', 'password.change', user._id)
+  await startSession({ _id: user._id, sessionVersion: user.sessionVersion + 1 })
+  redirect('/')
+}
+
+/** Staff choose a short sign-in username (needs the current password). Students sign in with their university email. */
+export async function setUsername(_: State, fd: FormData): Promise<State> {
+  const me = await currentUser()
+  if (!me) redirect('/login')
+  if (me.student) return { error: 'Students sign in with their university email.' }
+  const username = str(fd, 'username', 30).toLowerCase()
+  if (username && !USERNAME.test(username)) return { error: 'Use 3–30 letters, digits, dots, dashes or underscores, starting with a letter or digit.' }
+  const user = await User.findById(me._id).select('+passwordHash username')
+  if (!user || !(await verifyPassword(String(fd.get('current') ?? ''), user.passwordHash))) return { error: 'Current password is incorrect.' }
+  const before = user.username
+  try {
+    await User.updateOne({ _id: me._id }, username ? { $set: { username } } : { $unset: { username: 1 } })
+  } catch (e) {
+    if ((e as { code?: number }).code === 11000) return { error: 'That username is taken.' }
+    throw e
+  }
+  await audit(me, 'users', 'user.username', me._id, { username: before }, { username: username || null })
+  revalidatePath('/account')
+  return { ok: username ? `You can now sign in as “${username}”.` : 'Username removed. Sign in with your email.' }
 }

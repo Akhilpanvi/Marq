@@ -3,8 +3,8 @@ import { Types } from 'mongoose'
 import { can, scopedStudentIds, type Me } from './auth'
 import { profiles } from './intel'
 import { attendancePct, DIMENSIONS, type Dim } from './scoring'
-import { placementStatus, OFFERED, REJECTED } from './placement'
-import { Application, Assessment, AssessmentResult, Attendance, Batch, CodingStat, Evaluation, FinancialRecord, Interview, Student, Target, User } from '@/models'
+import { placementStatus, OFFERED, REJECTED, DRIVE_OPTIONS } from './placement'
+import { Application, Assessment, Job, AssessmentResult, Attendance, Batch, CodingStat, Evaluation, Interview, Student, Target, User } from '@/models'
 import { PLATFORMS, PLATFORM_KEYS, platformPoints, targetFlag } from './coding-points'
 import type { Perm } from './rbac'
 
@@ -101,6 +101,22 @@ export const REPORTS: Record<string, Def> = {
       }
     },
   },
+  drives: {
+    title: 'Drive status', description: 'Per company drive: how many students answered, and how many are at each stage (the Google-Form question).', perm: 'applications.view',
+    build: async (me, p) => {
+      const { ids } = await scopedStudents(me, p)
+      const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ createdAt: 1 }).lean()
+      const apps = await Application.find({ job: { $in: jobs.map(j => j._id) }, student: { $in: ids } }).select('job status').lean()
+      return {
+        title: 'Drive status',
+        columns: ['Company', 'Role', 'Registration', 'Answered', 'Not answered', ...DRIVE_OPTIONS.map(([l]) => l)],
+        rows: jobs.map(j => {
+          const a = apps.filter(x => String(x.job) === String(j._id))
+          return [j.company?.name ?? '', j.role, j.status === 'open' ? 'Open' : 'Closed', a.length, ids.length - a.length, ...DRIVE_OPTIONS.map(([, s]) => a.filter(x => x.status === s).length)]
+        }),
+      }
+    },
+  },
   evaluations: {
     title: 'Mentor evaluations', description: 'Ratings, strengths, weaknesses and recommendations.', perm: 'mentorship.view',
     build: async (me, p) => {
@@ -157,13 +173,7 @@ export const REPORTS: Record<string, Def> = {
       }
     },
   },
-  finance: {
-    title: 'Financial records', description: 'Training expenditure with approval status.', perm: 'finance.view',
-    build: async () => {
-      const recs = await FinancialRecord.find().sort({ date: -1 }).lean()
-      return { title: 'Financial records', columns: ['Date', 'Category', 'Description', 'Vendor', 'Reference', 'Amount (INR)', 'Status'], rows: recs.map(f => [d(f.date), f.category, f.description, f.vendor ?? '', f.reference ?? '', f.amount, f.status ?? '']) }
-    },
-  },
+
 }
 
 /** Reports need reports.view, the module's own view permission, and (for downloads) an export permission. */
@@ -171,6 +181,6 @@ export function canReport(me: Me | null, key: string, exporting: boolean) {
   const def = REPORTS[key]
   if (!me || !def || me.student) return false
   if (!can(me, def.perm) || !can(me, 'reports.view')) return false
-  if (exporting && !(can(me, 'reports.export') || (key === 'finance' && can(me, 'finance.export')) || (key === 'students' && can(me, 'students.export')))) return false
+  if (exporting && !(can(me, 'reports.export') || (key === 'students' && can(me, 'students.export')))) return false
   return true
 }

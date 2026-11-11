@@ -27,12 +27,16 @@ _Last updated: 11 Nov 2026_
 | 17 | Reports (10 reports, CSV/Excel, branded printable view, permission + scope aware) | Done | e2e: xlsx/csv/print |
 | 18 | Announcements & notifications (role/batch targeting, read/unread, history) | Done | e2e: student receives job/feedback/status notifications |
 | 19 | Dashboards (admin, director, accounts, assistant, mentor/trainer, student) | Done | e2e renders; visual review |
-| 20 | Financial records (expenses, approval with maker-checker, budget, charts) | Done | e2e |
+| 20 | ~~Financial records~~ | Removed (Nov 2026, not needed) | seed drops finance permissions and the Director Accounts role |
 | 21 | Audit logs (append-only, filters, IP) | Done | e2e asserts 8 action types |
 | 22 | Settings (weights, category mapping, thresholds, extra statuses) | Done | renders; saving scoring manual |
 | 23 | Branding (MARQ logo + variants, KL assets, favicon, reports, emails, light/dark) | Done | visual review |
 | 23b | Coding profiles, leaderboards, contest leaderboard, targets, coding report (from the Smart Interviews walkthrough) | Done | e2e: live Codeforces sync, both leaderboards, visibility toggle, target flags in report |
 | 23c | Daily Register: college-format period attendance, Excel/CSV upload with auto-read date and marks, Verify (absentee pop-up) → Confirm & lock, change requests with Director approval, day + consolidated Excel/CSV downloads | Done | e2e: upload, verify, lock, request, approve, both downloads |
+| 23d | Student self-registration (list-only emails, details confirmation, emailed link) + mandatory onboarding (coding profiles checked live, profile) | Done | e2e |
+| 23e | Company drives from the programme Google Form + “Status of the candidate” question + Drive status report | Done | e2e |
+| 23f | Feedback (public / auto-filled when signed in) + admin Feedback Inbox | Done | e2e |
+| 23g | Staff sign-in usernames; password change from the sign-in page | Done | e2e |
 | 24 | Deployment config (vercel.json, env, cron, health, docs) | Done | live at https://marq.klef.me; GitHub → Vercel auto-deploy |
 
 ## Pending / next
@@ -43,7 +47,8 @@ _Last updated: 11 Nov 2026_
 
 ## Known issues / limitations
 
-- **Production roles:** the daily register needs two permissions added to roles created before it shipped (Admin Assistant: Create Attendance; Director: Approve Attendance). Run `npm run seed` once against production (it adds them idempotently), or tick them in Roles & Permissions.
+- **Production data steps (one-off):** run `npm run seed` against production (adds Admin Assistant: Create Attendance, Director: Approve Attendance, Administrator: Feedback; removes finance permissions and the unused Director Accounts role), and `npx tsx scripts/seed-drives.ts` to load the 12 company drives.
+- **Self-registration email** requires `marq.klef.me` verified in Resend; until then registration stops with a clear message (links are never shown on screen).
 
 - Learning materials and application documents are stored as **links** (Drive/LMS), not file uploads — no blob storage is configured. Profile photos are stored in MongoDB (≤300 KB).
 - Pages stream with a loading skeleton, so `notFound()` renders the 404 page with HTTP 200 (documented Next.js behaviour). No data is rendered; e2e asserts this.
@@ -55,7 +60,7 @@ _Last updated: 11 Nov 2026_
 ## Testing status
 
 - `npm test` — scoring unit checks: pass.
-- `npm run test:e2e` — 30 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npm run test:e2e` — 34 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
 - `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Architectural decisions

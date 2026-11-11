@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import {
-  Banknote, BarChart3, Bell, BookOpen, Code2, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
+  BarChart3, Bell, BookOpen, Code2, Inbox, MessageSquareHeart, KeyRound, Medal, Briefcase, Building2, CalendarCheck, ClipboardCheck, ClipboardList, FileText, Gauge,
   GraduationCap, LayoutDashboard, Megaphone, MessagesSquare, Settings, ShieldCheck, ScrollText, Trophy, UserCog, UserRound, Users, Video,
 } from 'lucide-react'
 import { hasPerm, type Perm } from '@/lib/rbac'
@@ -45,9 +45,10 @@ const ADMIN: { group: string; items: Item[] }[] = [
     items: [
       { href: '/reports', label: 'Reports', icon: BarChart3, perm: 'reports.view' },
       { href: '/announcements', label: 'Announcements', icon: Megaphone, perm: 'announcements.view' },
-      { href: '/finance', label: 'Financial Records', icon: Banknote, perm: 'finance.view' },
+      { href: '/inbox', label: 'Feedback Inbox', icon: Inbox, perm: 'feedback.view' },
       { href: '/audit', label: 'Audit Logs', icon: ScrollText, perm: 'audit.view' },
       { href: '/settings', label: 'Settings', icon: Settings, perm: 'settings.view' },
+      { href: '/feedback', label: 'Send Feedback', icon: MessageSquareHeart },
     ],
   },
 ]
@@ -66,6 +67,7 @@ const STUDENT: Item[] = [
   { href: '/me/interviews', label: 'My Interviews', icon: Video },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/account', label: 'Change Password', icon: KeyRound },
+  { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },
 ]
 
 function NavLink({ item, label, path }: { item: Item; label: string; path: string }) {

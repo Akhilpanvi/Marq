@@ -15,7 +15,7 @@ const DB = 'mongodb://127.0.0.1:27017/marq_test'
 const PW = 'Correct-Horse-42'
 const SA = { email: 'sa@marq.test', pw: 'Super-Admin-Pass-1' }
 const tmp = mkdtempSync(join(tmpdir(), 'marq-e2e-'))
-const env = { ...process.env, MONGODB_URI: DB, APP_URL: BASE, NODE_ENV: 'production', PORT: String(PORT), SUPERADMIN_EMAIL: SA.email, SUPERADMIN_PASSWORD: SA.pw, SMTP_HOST: '', CRON_SECRET: 'test-cron' } as NodeJS.ProcessEnv
+const env = { ...process.env, MONGODB_URI: DB, APP_URL: BASE, NODE_ENV: 'production', PORT: String(PORT), SUPERADMIN_EMAIL: SA.email, SUPERADMIN_PASSWORD: SA.pw, SMTP_HOST: '', CRON_SECRET: 'test-cron', REGISTRATION_SHOW_LINK: 'true', LOGIN_RATE_LIMIT: '500' } as NodeJS.ProcessEnv
 const chrome = process.env.CHROME ?? join(homedir(), 'Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell')
 
 let passed = 0
@@ -81,7 +81,7 @@ try {
   const sa = await login(SA.email, SA.pw)
   const staff: Record<string, string> = {
     'Admin Assistant': 'aa@marq.test', 'Training Administrator': 'ta@marq.test', 'Placement Administrator': 'pa@marq.test',
-    Mentor: 'm1@marq.test', Trainer: 't1@marq.test', Director: 'dir@marq.test', 'Director Accounts': 'da@marq.test', Administrator: 'admin@marq.test',
+    Mentor: 'm1@marq.test', Trainer: 't1@marq.test', Director: 'dir@marq.test', Administrator: 'admin@marq.test',
   }
 
   await step('Super Admin creates one account per role and each activates via one-time link', async () => {
@@ -259,7 +259,7 @@ try {
     await t1.getByText('Asha Rao').waitFor()
     assert.equal(await t1.getByText('Chitra Devi').count(), 0)
     await blocked(t1, `/students/${ids['2300030003']}`, 'Chitra')
-    await t1.goto('/finance')
+    await t1.goto('/users')
     await t1.waitForURL('**/denied')
     await t1.context().close()
   })
@@ -303,6 +303,32 @@ try {
   })
 
   const s1 = await login('2300030001@kluniversity.in')
+  await step('New student must complete onboarding: coding profiles (checked live) then profile', async () => {
+    await s1.waitForURL('**/onboarding')
+    await s1.goto('/me') // gated
+    await s1.waitForURL('**/onboarding')
+    await s1.fill('input[name=leetcode]', 'lee215')
+    await s1.fill('input[name=codechef]', 'this-user-does-not-exist-zz9')
+    await s1.fill('input[name=github]', 'torvalds')
+    await s1.getByRole('button', { name: 'Verify & continue' }).click()
+    await errorShown(s1, /don’t exist: codechef/)
+    await s1.fill('input[name=codechef]', 'gennady.korotkevich')
+    await s1.getByRole('button', { name: 'Verify & continue' }).click()
+    await toast(s1, 'Coding profiles verified')
+    await s1.reload()
+    await s1.fill('input[name=phone]', '9876543210')
+    await s1.fill('input[name=personalEmail]', 'asha.personal@example.com')
+    await s1.fill('input[name=headline]', 'Aspiring backend engineer')
+    await s1.fill('input[name=linkedin]', 'https://linkedin.com/in/example')
+    await s1.fill('input[name=resume]', 'https://drive.google.com/file/d/example')
+    await s1.fill('input[name=skills]', 'Java, DSA')
+    await s1.getByRole('button', { name: 'Finish & open MARQ' }).click()
+    await errorShown(s1, /at least 3 skills/)
+    await s1.fill('input[name=skills]', 'Java, DSA, SQL')
+    await s1.getByRole('button', { name: 'Finish & open MARQ' }).click()
+    await s1.waitForURL('**/me')
+  })
+
   await step('Student: dashboard, notifications, apply to job, duplicate blocked', async () => {
     await s1.goto('/me')
     await s1.getByText('Welcome, Asha').waitFor()
@@ -314,7 +340,7 @@ try {
     await s1.locator('.card', { hasText: 'Software Engineer' }).getByRole('button', { name: 'Apply' }).click()
     await toast(s1, /Applied to Acme Corp/)
     await s1.reload()
-    await s1.getByText('Applied · Applied').waitFor()
+    await s1.getByText('Status: Applied').waitFor()
     await s1.goto('/me/applications')
     const d = await open(s1, /Add application/)
     await d.locator('input[name=company]').fill('acme corp')
@@ -341,6 +367,18 @@ try {
     await s1.getByText('Test on Friday').waitFor()
     const app = await mongoose.connection.collection('applications').findOne({ company: 'Globex' })
     assert.deepEqual(app!.history.map((h: { to: string }) => h.to), ['Applied', 'Written Test Scheduled'])
+  })
+
+  await step('Drive status: student answers the form question on a drive; report counts it', async () => {
+    await s1.goto('/me/jobs') // she already applied to the only drive, so no reminder banner
+    const card = s1.locator('.card', { hasText: 'Software Engineer' })
+    await card.locator('select[name=status]').selectOption({ label: 'Qualified for Technical Interview Round (TR)' })
+    await card.getByRole('button', { name: 'Save' }).click()
+    await toast(s1, /Saved: Qualified for Technical Interview Round/)
+    const app = await mongoose.connection.collection('applications').findOne({ company: 'Acme Corp' })
+    assert.equal(app!.status, 'Technical Interview Scheduled')
+    const csv = await (await sa.request.get('/api/reports/drives?format=csv')).text()
+    assert.match(csv, /"Acme Corp","Software Engineer","Open","1","3"/)
   })
 
   await step('Coding profiles: student links a handle, gets points, rank and appears on both leaderboards', async () => {
@@ -418,40 +456,95 @@ try {
     await pa.getByText('Students with offers').waitFor()
   })
 
-  await step('Finance: Training Admin submits expense, Director Accounts approves and sets budget', async () => {
-    await ta.goto('/finance')
-    const d = await open(ta, /Add expense/)
-    await d.locator('input[name=date]').fill(new Date().toISOString().slice(0, 10))
-    await d.locator('input[name=category]').fill('Trainer fees')
-    await d.locator('input[name=amount]').fill('50000')
-    await d.locator('textarea[name=description]').fill('Week 1 DSA trainer')
-    await d.getByRole('button', { name: 'Submit for approval' }).click()
-    await toast(ta, 'pending approval')
-    const da = await login(staff['Director Accounts'])
-    await da.getByRole('heading', { name: 'Accounts Overview' }).waitFor()
-    await da.goto('/finance')
-    await da.getByRole('button', { name: 'Approve' }).click()
-    await toast(da, 'Marked approved')
-    const b = await open(da, 'Set budget')
-    await b.locator('input[name=budget]').fill('1000000')
-    await b.getByRole('button', { name: 'Save budget' }).click()
-    await toast(da, 'Budget updated')
-    await da.goto('/students')
-    await da.waitForURL('**/denied')
-    await da.context().close()
-  })
-
   await step('Director: executive overview, read-only, no finance or user management', async () => {
     const dir = await login(staff.Director)
     await dir.getByRole('heading', { name: 'Executive Overview' }).waitFor()
     await dir.goto('/students')
     assert.equal(await dir.getByRole('button', { name: /Add student/ }).count(), 0)
-    for (const path of ['/finance', '/users', '/audit']) {
+    for (const path of ['/users', '/audit']) {
       await dir.goto(path)
       await dir.waitForURL('**/denied')
     }
     assert.equal((await dir.request.get('/api/reports/performance?format=xlsx')).status(), 200)
     await dir.context().close()
+  })
+
+  await step('Feedback: visitor and signed-in student; admins see it in the inbox', async () => {
+    const ctx = await browser.newContext({ baseURL: BASE })
+    const v = await ctx.newPage()
+    await v.goto('/login')
+    await v.getByRole('link', { name: 'Send feedback' }).click()
+    await v.fill('input[name=name]', 'A Visitor')
+    await v.fill('input[name=email]', 'visitor@example.com')
+    await v.fill('textarea[name=message]', 'The login page looks great on my phone.')
+    await v.getByRole('button', { name: 'Send feedback' }).click()
+    await toast(v, /feedback has been sent/)
+    await ctx.close()
+    await s1.goto('/feedback')
+    await s1.getByText('Sending as').waitFor()
+    assert.equal(await s1.locator('input[name=email]').count(), 0)
+    await s1.locator('select[name=category]').selectOption('Bug')
+    await s1.fill('textarea[name=message]', 'Leaderboard should show my batch first.')
+    await s1.getByRole('button', { name: 'Send feedback' }).click()
+    await toast(s1, /feedback has been sent/)
+    await sa.goto('/inbox')
+    await sa.getByText('The login page looks great on my phone.').waitFor()
+    await sa.getByText(/Student · 2300030001/).waitFor()
+    await sa.getByRole('button', { name: 'Mark resolved' }).first().click()
+    await toast(sa, 'Marked resolved')
+    await s1.goto('/inbox')
+    await s1.waitForURL('**/denied')
+  })
+
+  await step('Student self-registration: only Top Notch emails, details shown, link emailed, then onboarding', async () => {
+    const ctx = await browser.newContext({ baseURL: BASE })
+    const p = await ctx.newPage()
+    await p.goto('/register')
+    await p.fill('input[type=email]', 'stranger@gmail.com')
+    await p.getByRole('button', { name: 'Continue' }).click()
+    await errorShown(p, /not on the Top Notch Marquee list/)
+    await p.fill('input[type=email]', '2300030001@kluniversity.in')
+    await p.getByRole('button', { name: 'Continue' }).click()
+    await errorShown(p, /already registered/)
+    await p.fill('input[type=email]', '2300030004@kluniversity.in')
+    await p.getByRole('button', { name: 'Continue' }).click()
+    await p.getByText('Is this you?').waitFor()
+    await p.getByText('Dev Patel').waitFor()
+    await p.getByRole('button', { name: 'Register' }).click()
+    await p.getByText(/test mode: link shown/).waitFor()
+    const link = await p.locator('a[href*="/activate?token="]').getAttribute('href')
+    await p.goto(link!)
+    await p.fill('input[name=next]', PW)
+    await p.fill('input[name=confirm]', PW)
+    await p.click('button:has-text("Set password")')
+    await p.waitForURL('**/onboarding')
+    await p.getByText('Coding profiles').first().waitFor()
+    await ctx.close()
+  })
+
+  await step('Staff username sign-in and password change from the login page', async () => {
+    const ad = await login(staff['Placement Administrator'])
+    await ad.goto('/account')
+    await ad.fill('input[name=username]', 'placement')
+    await ad.locator('form', { hasText: 'Username' }).locator('input[name=current]').fill(PW)
+    await ad.getByRole('button', { name: 'Save username' }).click()
+    await toast(ad, /sign in as “placement”/)
+    await ad.context().close()
+    const ctx = await browser.newContext({ baseURL: BASE })
+    const p = await ctx.newPage()
+    await p.goto('/login')
+    await p.getByRole('link', { name: 'Change password' }).click()
+    await p.waitForURL('**/change-password')
+    await p.fill('input[name=id]', 'placement')
+    await p.fill('input[name=current]', PW)
+    await p.fill('input[name=next]', 'Brand-New-Pass-77')
+    await p.fill('input[name=confirm]', 'Brand-New-Pass-77')
+    await p.getByRole('button', { name: /Change password & sign in/ }).click()
+    await p.waitForURL('**/overview')
+    await ctx.close()
+    const again = await login('placement', 'Brand-New-Pass-77')
+    await again.getByRole('heading', { name: 'Programme Overview' }).waitFor()
+    await again.context().close()
   })
 
   await step('Daily register: upload the college sheet, auto-read date and marks, Verify, Confirm, locked', async () => {
@@ -528,9 +621,9 @@ try {
     await sa.getByText('Confidential').waitFor()
   })
 
-  await step('Audit log records imports, corrections, status changes and finance approvals', async () => {
+  await step('Audit log records imports, corrections, status changes, approvals and registrations', async () => {
     const actions = await mongoose.connection.collection('auditlogs').distinct('action')
-    for (const a of ['student.import', 'attendance.correct', 'results.update', 'application.status', 'finance.approved', 'account.bulkCreate', 'user.create', 'report.export']) assert.ok(actions.includes(a), `missing audit ${a}`)
+    for (const a of ['student.import', 'attendance.correct', 'results.update', 'application.status', 'register.changeApproved', 'account.selfRegister', 'onboarding.complete', 'account.bulkCreate', 'user.create', 'report.export']) assert.ok(actions.includes(a), `missing audit ${a}`)
     await sa.goto('/audit?q=attendance.correct')
     await sa.getByText('attendance.correct').first().waitFor()
   })
@@ -584,7 +677,7 @@ try {
   })
 
   await step('Every navigation page renders without server errors for Super Admin', async () => {
-    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/finance', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
+    for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/interviews', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
       assert.equal(r?.status(), 200, path)
     }

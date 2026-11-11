@@ -6,8 +6,9 @@ import { escapeRe } from '@/components/list'
 import { Application, Company, Job } from '@/models'
 import { Badge, Card, Empty, PageHeader } from '@/components/ui'
 import { Filters, Select, sp } from '@/components/list'
-import { ActionButton } from '@/components/form'
-import { applyToJob } from '@/app/actions/placement'
+import { ActionButton, ActionForm } from '@/components/form'
+import { applyToJob, setDriveStatus } from '@/app/actions/placement'
+import { DRIVE_OPTIONS, driveLabel } from '@/lib/placement'
 
 export const metadata = { title: 'Job Opportunities' }
 
@@ -15,17 +16,19 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   const me = await requireStudent()
   const params = await searchParams
   const q = sp(params, 'q'), type = sp(params, 'type'), company = sp(params, 'company'), min = Number(sp(params, 'min')) || 0
-  const filter: Record<string, unknown> = { status: 'open' }
+  const filter: Record<string, unknown> = { status: { $in: ['open', 'closed'] } }
   if (q) filter.$or = [{ role: new RegExp(escapeRe(q), 'i') }, { skills: new RegExp(escapeRe(q), 'i') }, { location: new RegExp(escapeRe(q), 'i') }]
   if (type) filter.type = type
   if (/^[a-f0-9]{24}$/.test(company)) filter.company = company
   if (min) filter.ctc = { $gte: min }
-  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status').lean(), companyOptions()])
+  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ status: -1, deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status').lean(), companyOptions()])
   const cos = new Map((await Company.find({ _id: { $in: jobs.map(j => j.company) } }).lean()).map(c => [String(c._id), c]))
   const applied = new Map(mine.filter(a => a.job).map(a => [String(a.job), a.status]))
+  const unanswered = jobs.filter(j => !applied.has(String(j._id))).length
   return (
     <>
-      <PageHeader title="Job Opportunities" description="Opportunities published by the placement team. Applying here adds it to My Applications." />
+      <PageHeader title="Job Opportunities" description="Drives published by the placement team. Apply here, and keep “Status of the candidate” updated for every drive — it feeds the programme's placement analysis." />
+      {unanswered > 0 && <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Choose an option on each card below — “Not applied” counts as an answer.</div>}
       <Card pad={false} className="mb-6">
         <Filters params={params} placeholder="Search role, skill or location">
           <Select name="company" value={company} options={companies} all="All companies" />
@@ -36,7 +39,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
       <div className="grid gap-4 lg:grid-cols-2">
         {jobs.map(j => {
           const c = cos.get(String(j.company))
-          const closed = !!j.deadline && j.deadline < new Date()
+          const closed = j.status === 'closed' || (!!j.deadline && j.deadline < new Date())
           const status = applied.get(String(j._id))
           return (
             <Card key={String(j._id)}>
@@ -44,7 +47,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {c?.logo ? <img src={c.logo} alt="" className="size-10 rounded-md bg-white object-contain p-1 ring-1 ring-line" referrerPolicy="no-referrer" /> : <span className="grid size-10 place-items-center rounded-md bg-subtle font-semibold">{c?.name[0]}</span>}
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{j.role}</div>
+                  <div className="font-semibold">{j.role}{j.status === 'closed' && <span className="ml-2"><Badge tone="zinc">Registration closed</Badge></span>}</div>
                   <div className="text-sm text-muted">{c?.name}{j.location ? ` · ${j.location}` : ''}</div>
                   <div className="mt-2 flex flex-wrap gap-1.5"><Badge tone="green">{j.ctcText || (j.ctc ? `${j.ctc} LPA` : 'Package TBA')}</Badge><Badge>{j.type}</Badge>{j.deadline && <Badge tone={closed ? 'red' : 'amber'}>Apply by {day(j.deadline)}</Badge>}</div>
                 </div>
@@ -54,9 +57,20 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
               {j.eligibility && <p className="mt-1 text-xs text-muted">Eligibility: {j.eligibility}</p>}
               {j.process && <p className="mt-1 text-xs text-muted">Process: {j.process}</p>}
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                {status ? <Badge tone="blue">Applied · {status}</Badge> : closed ? <Badge tone="zinc">Deadline passed</Badge> : <ActionButton action={applyToJob} fields={{ job: String(j._id) }} className="btn-primary" confirm={`Apply to ${c?.name} — ${j.role}?`}>Apply</ActionButton>}
+                {status && <Badge tone="blue">Status: {driveLabel(status) ?? status}</Badge>}
+                {!status && !closed && <ActionButton action={applyToJob} fields={{ job: String(j._id) }} className="btn-primary" confirm={`Apply to ${c?.name} — ${j.role}?`}>Apply</ActionButton>}
                 {j.link && <a href={j.link} target="_blank" rel="noopener noreferrer" className="btn-ghost"><ExternalLink className="size-4" />Company link</a>}
               </div>
+              <ActionForm action={setDriveStatus} reset={false} className="mt-4 space-y-2 rounded-lg border border-line bg-subtle/40 p-3">
+                <input type="hidden" name="job" value={String(j._id)} />
+                <label className="block text-xs font-medium">Status of the candidate for this drive {!status && <span className="text-red-600">· not answered</span>}
+                  <select name="status" required defaultValue={DRIVE_OPTIONS.some(([, v]) => v === status) ? status : ''} className="input mt-1">
+                    <option value="" disabled>Choose…</option>
+                    {DRIVE_OPTIONS.map(([label, v]) => <option key={v} value={v}>{label}</option>)}
+                  </select>
+                </label>
+                <div className="flex gap-2"><input name="remarks" placeholder="Remarks (optional)" maxLength={500} className="input" /><button className="btn-outline">Save</button></div>
+              </ActionForm>
             </Card>
           )
         })}

@@ -8,7 +8,6 @@ export function ago(d?: Date | string | null) {
 
 export const fmt = (n?: number | null, digits = 0) => (n == null || Number.isNaN(n) ? '—' : n.toLocaleString('en-IN', { maximumFractionDigits: digits }))
 export const pct = (n?: number | null) => (n == null ? '—' : `${Math.round(n)}%`)
-export const inr = (n?: number | null) => (n == null ? '—' : n.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }))
 export const day = (d?: Date | string | null) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '—')
 export const dayTime = (d?: Date | string | null) =>
   d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '—'

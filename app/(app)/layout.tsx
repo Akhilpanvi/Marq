@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Bell, LogOut } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
+import { onboardingState } from '@/lib/onboarding'
 import { logout } from '@/app/actions/auth'
 import { Avatar } from '@/components/ui'
 import { Nav } from '@/components/nav'
@@ -10,6 +12,8 @@ import { Notification } from '@/models'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await requireUser()
+  // self-registered (and newly invited) students finish onboarding before the portal opens
+  if (me.student && !(await onboardingState(me.student))?.done) redirect('/onboarding')
   const unread = await Notification.countDocuments({ user: me._id, read: false })
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[256px_1fr]">

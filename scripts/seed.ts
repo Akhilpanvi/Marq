@@ -18,12 +18,18 @@ export async function seedRoles() {
   await Role.updateOne({ key: 'superadmin' }, { $set: { perms: ['*'] } })
   // permissions added to built-in roles after first release (idempotent)
   for (const [key, perms] of Object.entries(ADDED_PERMS)) await Role.updateOne({ key }, { $addToSet: { perms: { $each: perms } } })
+  // Finance module removed (Nov 2026): drop its permissions and the Director Accounts role if nobody holds it
+  const fin = await Role.find({ perms: { $regex: '^finance\\.' } }).select('_id perms').lean()
+  for (const r of fin) await Role.updateOne({ _id: r._id }, { $set: { perms: r.perms.filter(p => !p.startsWith('finance.')) } })
+  const da = await Role.findOne({ key: 'director_accounts' }).lean()
+  if (da && !(await User.exists({ role: da._id }))) await Role.deleteOne({ _id: da._id })
 }
 
 /** Daily register (Nov 2026): assistants post attendance, the Director approves changes. */
 const ADDED_PERMS: Record<string, string[]> = {
   admin_assistant: ['attendance.view', 'attendance.create'],
   director: ['attendance.approve'],
+  admin: ['feedback.view', 'feedback.edit'],
 }
 
 async function main() {

@@ -28,6 +28,7 @@ const userSchema = new Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     empId: { type: String, trim: true, uppercase: true, index: { unique: true, sparse: true } },
+    username: { type: String, trim: true, lowercase: true, index: { unique: true, sparse: true } }, // optional sign-in name (staff)
     phone: String,
     department: String,
     designation: String,
@@ -73,6 +74,7 @@ const studentSchema = new Schema(
     handles: { leetcode: String, codechef: String, codeforces: String, github: String },
     professional: { headline: String, linkedin: String, github: String, portfolio: String, resume: String, skills: [String] },
     onLeaderboard: { type: Boolean, default: true },
+    onboardedAt: Date, // set once coding profiles + profile are complete (self-registration flow)
   },
   ts,
 )
@@ -334,22 +336,22 @@ const notificationSchema = new Schema(
 notificationSchema.index({ user: 1, read: 1, createdAt: -1 })
 export const Notification = model('Notification', notificationSchema)
 
-const financeSchema = new Schema(
+const feedbackSchema = new Schema(
   {
-    date: { type: Date, required: true, index: true },
-    category: { type: String, required: true },
-    description: { type: String, required: true },
-    amount: { type: Number, required: true, min: 0 },
-    vendor: String,
-    reference: String,
-    program: { type: ObjectId, ref: 'Program' },
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
-    approvedBy: { type: ObjectId, ref: 'User' },
-    createdBy: { type: ObjectId, ref: 'User' },
+    name: { type: String, required: true },
+    email: { type: String, required: true, lowercase: true },
+    role: String, // e.g. "Student · 2300030001", or "Visitor"
+    user: { type: ObjectId, ref: 'User' },
+    category: { type: String, enum: ['Suggestion', 'Bug', 'Question', 'Praise', 'Other'], default: 'Suggestion' },
+    rating: { type: Number, min: 1, max: 5 },
+    message: { type: String, required: true },
+    page: String,
+    status: { type: String, enum: ['new', 'resolved'], default: 'new', index: true },
+    resolvedBy: { type: ObjectId, ref: 'User' },
   },
   ts,
 )
-export const FinancialRecord = model('FinancialRecord', financeSchema)
+export const Feedback = model('Feedback', feedbackSchema)
 
 const settingSchema = new Schema({ key: { type: String, required: true, unique: true }, value: Mixed }, ts)
 export const Setting = model('Setting', settingSchema)

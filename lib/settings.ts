@@ -19,6 +19,4 @@ export const getScoring = cache(async (): Promise<ScoringConfig> => {
 /** Built-in statuses plus any an administrator added in Settings. */
 export const getStatuses = cache(async () => [...APP_STATUSES, ...(await get<string[]>('extraStatuses', []))])
 
-export const getBudget = cache(() => get<number>('budget', 0))
-
 export const putSetting = (key: string, value: unknown) => Setting.updateOne({ key }, { $set: { value } }, { upsert: true })

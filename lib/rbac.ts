@@ -15,8 +15,8 @@ export const MODULES = {
   interviews: 'Interviews',
   reports: 'Reports',
   announcements: 'Announcements',
-  finance: 'Financial Records',
   audit: 'Audit Logs',
+  feedback: 'Feedback',
   settings: 'Settings',
 } as const
 
@@ -40,7 +40,7 @@ export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 
   { key: 'superadmin', name: 'Super Administrator', scope: 'all', perms: ['*'], description: 'Complete platform control.' },
   {
     key: 'admin', name: 'Administrator', scope: 'all', description: 'Student information, operations and authorized reports.',
-    perms: [...all('students'), ...all('announcements'), ...view('users', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews'), ...all('reports', 'view', 'export')],
+    perms: [...all('students'), ...all('announcements'), ...all('feedback', 'view', 'edit'), ...view('users', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews'), ...all('reports', 'view', 'export')],
   },
   {
     key: 'admin_assistant', name: 'Admin Assistant', scope: 'all', description: 'Student records, onboarding, bulk uploads and student accounts.',
@@ -51,12 +51,8 @@ export const DEFAULT_ROLES: { key: string; name: string; scope: Scope; portal?: 
     perms: [...view('students', 'training', 'attendance', 'assessments', 'performance', 'mentorship', 'companies', 'jobs', 'applications', 'interviews', 'announcements'), ...all('reports', 'view', 'export'), 'attendance.approve'],
   },
   {
-    key: 'director_accounts', name: 'Director Accounts', scope: 'all', description: 'Training expenditure, budget and financial reports.',
-    perms: [...all('finance', 'view', 'approve', 'export'), 'reports.view'],
-  },
-  {
     key: 'training_admin', name: 'Training Administrator', scope: 'all', description: 'Schedules, attendance, trainer allocation and assessments.',
-    perms: [...all('training'), ...all('attendance'), ...all('assessments'), ...view('students', 'performance', 'mentorship', 'users'), ...all('reports', 'view', 'export'), ...all('announcements', 'view', 'create'), 'finance.create', 'finance.view'],
+    perms: [...all('training'), ...all('attendance'), ...all('assessments'), ...view('students', 'performance', 'mentorship', 'users'), ...all('reports', 'view', 'export'), ...all('announcements', 'view', 'create')],
   },
   {
     key: 'placement_admin', name: 'Placement Administrator', scope: 'all', description: 'Companies, opportunities, applications and interviews.',

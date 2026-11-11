@@ -5,7 +5,7 @@ import { journey } from '@/lib/journey'
 import { appMetrics } from '@/lib/app-metrics'
 import { placementStatus, statusTone } from '@/lib/placement'
 import { day, dayTime } from '@/lib/format'
-import { Assessment, Student, TrainingSession } from '@/models'
+import { Assessment, Job, Student, TrainingSession } from '@/models'
 import { Avatar, Badge, Card, Empty, KV, Meter, PageHeader } from '@/components/ui'
 import { ScoreTiles } from '@/components/score-tiles'
 import { Lines } from '@/components/charts'
@@ -25,6 +25,8 @@ export default async function StudentDashboard() {
     Assessment.find({ status: 'scheduled', date: { $gte: new Date(Date.now() - 12 * 3600_000) }, $or: [{ batches: s.batch }, { batches: { $size: 0 } }] }).select('name category date').sort({ date: 1 }).limit(5).lean(),
   ])
   const placed = placementStatus(j.apps)
+  const answered = new Set(j.apps.map(a => String(a.job)))
+  const pendingDrives = (await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()).filter(x => !answered.has(String(x._id))).length
   const upcomingInterviews = j.interviews.filter(i => i.status === 'scheduled' && i.at >= new Date()).sort((a, b) => +a.at - +b.at)
 
   return (
@@ -43,6 +45,7 @@ export default async function StudentDashboard() {
         </div>
       </div>
 
+      {pendingDrives > 0 && <Link href="/me/jobs" className="mb-6 block rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{pendingDrives} company drive{pendingDrives === 1 ? '' : 's'}</b> need your status — update now →</Link>}
       <ScoreTiles p={j.p} explain="/me/performance#formula" />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

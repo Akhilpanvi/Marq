@@ -14,14 +14,15 @@ Student performance intelligence and placement-readiness platform for the Top No
 proxy.ts                 optimistic gate (signed cookie); every page/action re-checks the DB
 app/
   login, activate, forgot-password       auth (no public sign-up; one-time links)
-  (app)/overview                         role-adaptive dashboard (admin · director · accounts · assistant · mentor/trainer)
+  (app)/overview                         role-adaptive dashboard (admin · director · assistant · mentor/trainer)
   (app)/students[/import|/[id]]          roster, bulk import, Student 360°
   (app)/users, roles                     accounts, RBAC permission matrix
   (app)/training[/sessions/[id]]         programmes, batches, sessions, materials, attendance marking
   (app)/attendance, assessments[/[id]]   reports, assessment centre, marks entry/import, rankings
   (app)/performance, mentors             performance intelligence, mentorship & evaluations
   (app)/companies, jobs, applications[/[id]], interviews, placement
-  (app)/reports[/[kind]], announcements, notifications, finance, audit, settings, account
+  (app)/reports[/[kind]], announcements, notifications, inbox (feedback), audit, settings, account
+  register, onboarding, feedback, change-password   public: self-registration, mandatory onboarding, feedback, password change
   (app)/me/*                             student portal (identity always from the session)
   actions/*.ts                           server actions — every one calls guard()/currentUser()/requireStudent()
   api/reports/[kind]                     CSV/Excel export (permission + scope + rate limit + audit)
@@ -56,7 +57,9 @@ npm run seed                    # system roles + first Super Administrator (no s
 npm run dev
 ```
 
-Sign in as the Super Administrator, then: create staff accounts (User Management) → programme and batches (Training) → import students (Students → Bulk import) → select students → **Create accounts & invite**.
+Sign in as the Super Administrator, then: create staff accounts (User Management) → programme and batches (Training) → import students (Students → Bulk import). Students then self-register at `/register` (only listed emails are accepted) — see `docs/STUDENT-REGISTRATION.md` — or admins invite them from Students → **Create accounts & invite**.
+
+Company drives from the programme's Google Form: `MONGODB_URI=… npx tsx scripts/seed-drives.ts` (idempotent).
 
 ### Tests
 
@@ -65,7 +68,7 @@ npm test             # scoring unit checks
 npx next build && npm run test:e2e
 ```
 
-`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (30 checks: account invitations, bulk import, attendance corrections, marks, scoring, mentor/trainer scoping, student isolation, applications and timelines, finance approval, director read-only, exports, audit, custom roles, session revocation, lockout, cron auth, dark mode, coding profiles and leaderboards, targets, daily register with Director-approved changes). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
+`test:e2e` runs the production build on :3200 against a throwaway `marq_test` database (dropped first) and drives every role through the real UI with headless Chromium (34 checks across every role, including self-registration, onboarding, the daily register, drive status, feedback and security). Set `CHROME=/path/to/chrome` if the Playwright headless shell isn't at the default cache path.
 
 ## Deployment (Vercel)
 
@@ -93,4 +96,4 @@ Logs: Vercel runtime logs (server errors are logged with `console.error`). The d
 - KL University: the official `kl-seal.png` and `kl-lockup.png` supplied in `Brand/`, served from `public/brand/`; never redrawn. Replace them with SVGs when available.
 - Chart palette validated for colour-vision deficiency in light and dark (`app/globals.css`).
 
-See `PROGRESS.md` for module status and decisions, and `docs/DISCOVERY.md` for the KLOOP assessment and the Smart Interviews gap analysis.
+See `PROGRESS.md` for module status and decisions, `docs/DISCOVERY.md` for the KLOOP assessment and the Smart Interviews gap analysis, `docs/STUDENT-REGISTRATION.md` for the registration flow (with screenshots and a video script), and `docs/MARQ-How-It-Works.pdf` for the illustrated overview (flowcharts and mind maps).
