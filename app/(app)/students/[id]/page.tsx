@@ -14,7 +14,8 @@ import { Avatar, Badge, Card, Empty, KV, PageHeader, Score, Table } from '@/comp
 import { ActionForm, Modal } from '@/components/form'
 import { StudentFields, STATUS_LABEL } from '@/components/student-fields'
 import { ScoreTiles } from '@/components/score-tiles'
-import { Bars, Lines } from '@/components/charts'
+import { Lines } from '@/components/charts'
+import { AttendanceDays } from '@/components/attendance-days'
 import { EvaluationFields } from '@/components/evaluation-fields'
 import { EvaluationList } from '@/components/evaluation-list'
 import { PrintButton } from '@/components/print'
@@ -106,9 +107,8 @@ export default async function Student360({ params }: { params: Promise<{ id: str
           <Card title="Training" icon={BookOpen}>
             <KV items={[['Programme', j.program?.name], ['Batch', j.batch?.name], ['Sessions completed', j.batch ? `${j.training.completed} of ${j.training.total}` : undefined], ['Attendance', pct(j.p.dims.attendance)]]} />
           </Card>
-          <Card title="Monthly attendance" icon={CalendarCheck} className="lg:col-span-2">
-            <Bars data={j.attendanceMonths} x="month" stacked height={200}
-              series={[{ key: 'present', label: 'Present' }, { key: 'absent', label: 'Absent' }, { key: 'excused', label: 'Excused' }, { key: 'late', label: 'Late' }]} />
+          <Card title="Day-wise attendance" icon={CalendarCheck} className="lg:col-span-2">
+            <AttendanceDays days={j.attendanceDays} limit={21} />
           </Card>
         </div>
 

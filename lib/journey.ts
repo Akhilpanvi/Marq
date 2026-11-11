@@ -27,12 +27,15 @@ export async function journey(studentId: Types.ObjectId, batchId?: Types.ObjectI
   const mentorName = new Map(mentors.map(m => [String(m._id), m.name]))
 
   // attendance by IST month
-  const months = new Map<string, { month: string; present: number; absent: number; late: number; excused: number }>()
+  // per day: periods attended / held (excused periods are not counted)
+  const days = new Map<string, { day: string; attended: number; held: number }>()
   for (const a of attendance) {
-    const k = new Date(a.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).slice(0, 7)
-    const m = months.get(k) ?? { month: k, present: 0, absent: 0, late: 0, excused: 0 }
-    m[a.status as 'present']++
-    months.set(k, m)
+    if (a.status === 'excused') continue
+    const k = new Date(a.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const d = days.get(k) ?? { day: k, attended: 0, held: 0 }
+    d.held++
+    if (a.status !== 'absent') d.attended++
+    days.set(k, d)
   }
 
   const timeline = [
@@ -47,7 +50,7 @@ export async function journey(studentId: Types.ObjectId, batchId?: Types.ObjectI
     trend: results.filter(r => r.marks != null).map(r => ({ date: new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), pct: Math.round((r.marks! / r.max) * 1000) / 10, name: r.name })),
     weekly: buckets(results, 'week'),
     monthly: buckets(results, 'month'),
-    attendanceMonths: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)),
+    attendanceDays: [...days.values()],
     training: { completed: sess.completed ?? 0, total: (sess.completed ?? 0) + (sess.scheduled ?? 0) },
   }
 }

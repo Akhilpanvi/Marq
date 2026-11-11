@@ -610,10 +610,11 @@ try {
     assert.equal(absentNow, 1)
     const day = await (await dir.request.get(`/api/attendance/day?day=${iso}&format=csv`)).text()
     assert.match(day, /Lunch Break/)
-    assert.match(day, /"Chitra Devi","A","A","A","A","Lunch Break","A","A"/)
+    assert.match(day, /"Student Name","Placement Mail ID"/)
+    assert.match(day, /"Chitra Devi","[^"]*","A","A","A","A","Lunch Break","A","A"/)
     const cons = await (await dir.request.get('/api/attendance/consolidated?format=csv')).text()
     assert.match(cons, /Attendance %/)
-    assert.match(cons, /"Bharat Kumar","5\/6","6","5","1","83.33"/)
+    assert.match(cons, /"Bharat Kumar","[^"]*","5\/6","6","5","1","83.33"/)
     const x = await dir.request.get('/api/attendance/consolidated?format=xlsx')
     assert.match(x.headers()['content-type'], /spreadsheetml/)
     await dir.context().close()
@@ -658,7 +659,11 @@ try {
     assert.equal(r.status(), 200)
     assert.match(r.headers()['content-type'], /spreadsheetml/)
     const c = await sa.request.get('/api/reports/attendance?format=csv')
-    assert.match(await c.text(), /Asha Rao/)
+    assert.match(await c.text(), /"Asha Rao","asha.personal@example.com"/) // Placement Mail ID in every student download
+    for (const kind of ['students', 'performance', 'coding', 'placement', 'applications', 'assessments']) {
+      const t = await (await sa.request.get(`/api/reports/${kind}?format=csv`)).text()
+      assert.match(t.split('\n')[0], /Placement Mail ID/, kind)
+    }
     await sa.goto('/reports/performance')
     await sa.getByText('Confidential').waitFor()
   })

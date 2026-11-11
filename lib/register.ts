@@ -6,7 +6,7 @@ import { columns, span, type Period } from './periods'
 import { safeCell } from './sheet'
 
 const dmy = (day: string) => day.split('-').reverse().join('.')
-const STUDENT_COLS = ['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name']
+export const STUDENT_COLS = ['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name', 'Placement Mail ID']
 
 /** Marks of every register in [from, to] (inclusive, YYYY-MM-DD), limited to `scope` students when given. */
 export async function loadRegisters(from?: string, to?: string, scope?: Types.ObjectId[] | null) {
@@ -14,7 +14,7 @@ export async function loadRegisters(from?: string, to?: string, scope?: Types.Ob
   const sessions = await TrainingSession.find({ register: { $in: regs.map(r => r._id) } }).select('register start').lean()
   const marks = await Attendance.find({ session: { $in: sessions.map(s => s._id) }, ...(scope ? { student: { $in: scope } } : {}) }).select('session student status history').lean()
   const sessionOf = new Map(sessions.map(s => [String(s._id), s]))
-  const students = await Student.find({ _id: { $in: [...new Set(marks.map(m => String(m.student)))] } }).select('regNo name department specialization').sort({ regNo: 1 }).lean()
+  const students = await Student.find({ _id: { $in: [...new Set(marks.map(m => String(m.student)))] } }).select('regNo name department specialization personalEmail').sort({ regNo: 1 }).lean()
   // status[studentId][day][periodNo]
   const status = new Map<string, Map<string, Map<number, string>>>()
   const corrected = new Set<string>()
@@ -41,7 +41,7 @@ export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType
     [...STUDENT_COLS.map(() => ''), ...cols.map(c => (c.kind === 'period' ? span(c.p) : span(c)))],
     [...STUDENT_COLS.map(() => ''), dmy(day), ...cols.slice(1).map(() => '')],
   ]
-  const body = data.students.map((s, i) => [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(day)?.get(c.p.no))))])
+  const body = data.students.map((s, i) => [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(day)?.get(c.p.no))))])
   return { head, body, cols }
 }
 
@@ -76,7 +76,7 @@ export async function dayWorkbook(day: string, periods: Period[], data: Awaited<
       if (i > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
     })
-  ws.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...cols.map(() => ({ width: 14 }))]
+  ws.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...cols.map(() => ({ width: 14 }))]
   ws.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 3 }]
   return Buffer.from(await wb.xlsx.writeBuffer())
 }
@@ -94,7 +94,7 @@ export function summaryRows(data: Awaited<ReturnType<typeof loadRegisters>>) {
       attended += n
       return `${n}/${byP.size}`
     })
-    return [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...days, held, attended, held - attended, held ? Math.round((attended / held) * 10000) / 100 : null] as (string | number | null)[]
+    return [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...days, held, attended, held - attended, held ? Math.round((attended / held) * 10000) / 100 : null] as (string | number | null)[]
   })
   return { head, body }
 }
@@ -116,7 +116,7 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
     pc.font = { bold: true }
     if (typeof pc.value === 'number' && pc.value < 75) pc.fill = fill(ABSENT)
   }
-  sum.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...data.regs.map(() => ({ width: 13 })), { width: 11 }, { width: 14 }, { width: 12 }, { width: 13 }]
+  sum.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...data.regs.map(() => ({ width: 13 })), { width: 11 }, { width: 14 }, { width: 12 }, { width: 13 }]
   sum.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 1 }]
 
   // Detailed: every day × period, P/A
@@ -137,7 +137,7 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
   data.students.forEach((s, i) => {
     const cells = data.regs.flatMap(r => r.periods.map(p => mark(data.status.get(String(s._id))?.get(r.day)?.get(p.no))))
     const held = cells.filter(Boolean).length, att = cells.filter(c => c === 'P').length
-    const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, ...cells, held, att, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
+    const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cells, held, att, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
     row.eachCell({ includeEmpty: true }, (c, j) => {
       c.border = border
       if (j > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
@@ -145,7 +145,7 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
     })
     row.getCell(n).numFmt = '0.00"%"'
   })
-  det.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, ...Array.from({ length: n - 5 }, () => ({ width: 6 }))]
+  det.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...Array.from({ length: n - 5 }, () => ({ width: 6 }))]
   det.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 2 }]
 
   return Buffer.from(await wb.xlsx.writeBuffer())

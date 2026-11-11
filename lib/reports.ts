@@ -39,10 +39,10 @@ export const REPORTS: Record<string, Def> = {
       const prof = await profiles(ids)
       const dims = Object.keys(DIMENSIONS) as Dim[]
       return {
-        title: 'Student performance', columns: ['Registration No', 'Name', 'Batch', 'Overall', 'Readiness', ...dims.map(k => DIMENSIONS[k]), 'Assessment avg', 'Assessments', 'Trend (pts/assessment)', 'Flags'],
+        title: 'Student performance', columns: ['Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Overall', 'Readiness', ...dims.map(k => DIMENSIONS[k]), 'Assessment avg', 'Assessments', 'Trend (pts/assessment)', 'Flags'],
         rows: students.map(s => {
           const x = prof.get(String(s._id))!
-          return [s.regNo, s.name, bName.get(String(s.batch)) ?? '', r1(x.overall), r1(x.readiness), ...dims.map(k => r1(x.dims[k])), r1(x.assessmentAvg), x.assessments, r1(x.trend), Object.entries(x.flags).filter(([, v]) => v).map(([k]) => k).join(', ')]
+          return [s.regNo, s.name, s.personalEmail ?? '', bName.get(String(s.batch)) ?? '', r1(x.overall), r1(x.readiness), ...dims.map(k => r1(x.dims[k])), r1(x.assessmentAvg), x.assessments, r1(x.trend), Object.entries(x.flags).filter(([, v]) => v).map(([k]) => k).join(', ')]
         }),
       }
     },
@@ -57,7 +57,7 @@ export const REPORTS: Record<string, Def> = {
       const agg = await Attendance.aggregate<{ _id: { s: Types.ObjectId; st: string }; n: number }>([{ $match: match }, { $group: { _id: { s: '$student', st: '$status' }, n: { $sum: 1 } } }])
       const m = new Map<string, Record<string, number>>()
       agg.forEach(a => m.set(String(a._id.s), { ...m.get(String(a._id.s)), [a._id.st]: a.n }))
-      return { title: 'Training attendance', columns: ['Registration No', 'Name', 'Batch', 'Present', 'Late', 'Absent', 'Excused', 'Attendance %'], rows: students.map(s => { const c = m.get(String(s._id)) ?? {}; return [s.regNo, s.name, bName.get(String(s.batch)) ?? '', c.present ?? 0, c.late ?? 0, c.absent ?? 0, c.excused ?? 0, r1(attendancePct(c))] }) }
+      return { title: 'Training attendance', columns: ['Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Present', 'Late', 'Absent', 'Excused', 'Attendance %'], rows: students.map(s => { const c = m.get(String(s._id)) ?? {}; return [s.regNo, s.name, s.personalEmail ?? '', bName.get(String(s.batch)) ?? '', c.present ?? 0, c.late ?? 0, c.absent ?? 0, c.excused ?? 0, r1(attendancePct(c))] }) }
     },
   },
   assessments: {
@@ -70,8 +70,8 @@ export const REPORTS: Record<string, Def> = {
       const results = await AssessmentResult.find(filter).lean()
       const as = new Map((await Assessment.find({ _id: { $in: results.map(r => r.assessment) }, ...(cat ? { category: cat } : {}) }).lean()).map(a => [String(a._id), a]))
       return {
-        title: 'Assessment results', columns: ['Assessment', 'Category', 'Date', 'Registration No', 'Name', 'Marks', 'Max', 'Percent', 'Remarks'],
-        rows: results.filter(r => as.has(String(r.assessment))).map(r => { const a = as.get(String(r.assessment))!, s = sInfo.get(String(r.student)); return [a.name, a.category, d(a.date), s?.regNo ?? '', s?.name ?? '', r.marks ?? 'AB', a.maxMarks, r.marks == null ? null : r1((r.marks / a.maxMarks) * 100), r.remarks ?? ''] })
+        title: 'Assessment results', columns: ['Assessment', 'Category', 'Date', 'Registration No', 'Name', 'Placement Mail ID', 'Marks', 'Max', 'Percent', 'Remarks'],
+        rows: results.filter(r => as.has(String(r.assessment))).map(r => { const a = as.get(String(r.assessment))!, s = sInfo.get(String(r.student)); return [a.name, a.category, d(a.date), s?.regNo ?? '', s?.name ?? '', s?.personalEmail ?? '', r.marks ?? 'AB', a.maxMarks, r.marks == null ? null : r1((r.marks / a.maxMarks) * 100), r.remarks ?? ''] })
           .sort((x, y) => String(x[2]).localeCompare(String(y[2]))),
       }
     },
@@ -96,8 +96,8 @@ export const REPORTS: Record<string, Def> = {
       }).sort((x, y) => y.total - x.total)
       const cols = PLATFORM_KEYS.flatMap(k => [`${PLATFORMS[k].label} rating`, `${PLATFORMS[k].label} points`])
       return {
-        title: 'Coding platforms', columns: ['Rank', 'Registration No', 'Name', 'Batch', 'Attendance %', ...cols, 'Total points', 'Target', 'Target status'],
-        rows: rows.map((r, i) => [i + 1, r.s.regNo, r.s.name, bName.get(String(r.s.batch)) ?? '', r1(a.get(String(r.s._id))), ...PLATFORM_KEYS.flatMap(k => { const c = r.cs.find(x => x.platform === k); return [c?.rating ?? null, c ? platformPoints(k, c) : null] }), r.total, r.target ? `${r.target.name} (${r.target.points})` : '', r.flag === 'met' ? 'Met' : r.flag === 'behind' ? 'Work harder' : r.flag === 'far' ? 'Improve immediately' : '']),
+        title: 'Coding platforms', columns: ['Rank', 'Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Attendance %', ...cols, 'Total points', 'Target', 'Target status'],
+        rows: rows.map((r, i) => [i + 1, r.s.regNo, r.s.name, r.s.personalEmail ?? '', bName.get(String(r.s.batch)) ?? '', r1(a.get(String(r.s._id))), ...PLATFORM_KEYS.flatMap(k => { const c = r.cs.find(x => x.platform === k); return [c?.rating ?? null, c ? platformPoints(k, c) : null] }), r.total, r.target ? `${r.target.name} (${r.target.points})` : '', r.flag === 'met' ? 'Met' : r.flag === 'behind' ? 'Work harder' : r.flag === 'far' ? 'Improve immediately' : '']),
       }
     },
   },
@@ -125,8 +125,8 @@ export const REPORTS: Record<string, Def> = {
       const evals = await Evaluation.find({ student: { $in: ids } }).sort({ date: -1 }).lean()
       const mentors = new Map((await User.find({ _id: { $in: evals.map(e => e.mentor) } }).select('name').lean()).map(u => [String(u._id), u.name]))
       return {
-        title: 'Mentor evaluations', columns: ['Date', 'Registration No', 'Student', 'Mentor', 'Technical', 'Coding', 'Communication', 'Aptitude', 'Attitude', 'Strengths', 'Weaknesses', 'Recommendations', 'Follow-up'],
-        rows: evals.map(e => [d(e.date), sInfo.get(String(e.student))?.regNo ?? '', sInfo.get(String(e.student))?.name ?? '', mentors.get(String(e.mentor)) ?? '', e.ratings?.technical ?? null, e.ratings?.coding ?? null, e.ratings?.communication ?? null, e.ratings?.aptitude ?? null, e.ratings?.attitude ?? null, e.strengths ?? '', e.weaknesses ?? '', e.recommendations ?? '', e.followUp?.date ? `${d(e.followUp.date)}${e.followUp.done ? ' (done)' : ''}` : '']),
+        title: 'Mentor evaluations', columns: ['Date', 'Registration No', 'Student', 'Placement Mail ID', 'Mentor', 'Technical', 'Coding', 'Communication', 'Aptitude', 'Attitude', 'Strengths', 'Weaknesses', 'Recommendations', 'Follow-up'],
+        rows: evals.map(e => [d(e.date), sInfo.get(String(e.student))?.regNo ?? '', sInfo.get(String(e.student))?.name ?? '', sInfo.get(String(e.student))?.personalEmail ?? '', mentors.get(String(e.mentor)) ?? '', e.ratings?.technical ?? null, e.ratings?.coding ?? null, e.ratings?.communication ?? null, e.ratings?.aptitude ?? null, e.ratings?.attitude ?? null, e.strengths ?? '', e.weaknesses ?? '', e.recommendations ?? '', e.followUp?.date ? `${d(e.followUp.date)}${e.followUp.done ? ' (done)' : ''}` : '']),
       }
     },
   },
@@ -136,7 +136,7 @@ export const REPORTS: Record<string, Def> = {
       const { students, ids } = await scopedStudents(me, p)
       const sInfo = new Map(students.map(s => [String(s._id), s]))
       const apps = await Application.find({ student: { $in: ids } }).sort({ updatedAt: -1 }).lean()
-      return { title: 'Job applications', columns: ['Registration No', 'Name', 'Company', 'Role', 'Source', 'Applied on', 'Status', 'Status changes', 'Last updated', 'Remarks'], rows: apps.map(a => [sInfo.get(String(a.student))?.regNo ?? '', sInfo.get(String(a.student))?.name ?? '', a.company, a.role, a.source ?? '', d(a.appliedOn), a.status, a.history.length, d(a.updatedAt), a.remarks ?? '']) }
+      return { title: 'Job applications', columns: ['Registration No', 'Name', 'Placement Mail ID', 'Company', 'Role', 'Source', 'Applied on', 'Status', 'Status changes', 'Last updated', 'Remarks'], rows: apps.map(a => [sInfo.get(String(a.student))?.regNo ?? '', sInfo.get(String(a.student))?.name ?? '', sInfo.get(String(a.student))?.personalEmail ?? '', a.company, a.role, a.source ?? '', d(a.appliedOn), a.status, a.history.length, d(a.updatedAt), a.remarks ?? '']) }
     },
   },
   companies: {
@@ -159,8 +159,8 @@ export const REPORTS: Record<string, Def> = {
       const by = new Map<string, typeof apps>()
       apps.forEach(a => by.set(String(a.student), [...(by.get(String(a.student)) ?? []), a]))
       return {
-        title: 'Placement statistics', columns: ['Registration No', 'Name', 'Batch', 'Placement status', 'Applications', 'Offers', 'Accepted at'],
-        rows: students.map(s => { const a = by.get(String(s._id)) ?? []; return [s.regNo, s.name, bName.get(String(s.batch)) ?? '', placementStatus(a).label, a.length, a.filter(x => OFFERED.includes(x.status)).length, a.filter(x => x.status === 'Accepted').map(x => x.company).join(', ')] }),
+        title: 'Placement statistics', columns: ['Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Placement status', 'Applications', 'Offers', 'Accepted at'],
+        rows: students.map(s => { const a = by.get(String(s._id)) ?? []; return [s.regNo, s.name, s.personalEmail ?? '', bName.get(String(s.batch)) ?? '', placementStatus(a).label, a.length, a.filter(x => OFFERED.includes(x.status)).length, a.filter(x => x.status === 'Accepted').map(x => x.company).join(', ')] }),
       }
     },
   },

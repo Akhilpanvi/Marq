@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Download, Lock } from 'lucide-react'
 import { can, requirePage, scopedStudentIds } from '@/lib/auth'
-import { dayRows, loadRegisters } from '@/lib/register'
+import { dayRows, loadRegisters, STUDENT_COLS } from '@/lib/register'
 import { span, type Period } from '@/lib/periods'
 import { dayTime } from '@/lib/format'
 import { DailyRegister, Student, User } from '@/models'
@@ -80,7 +80,7 @@ async function Locked({ day, reg, meId, canPost, canApprove, superadmin, scope }
   const { head, body, cols } = dayRows(day, reg.periods, data)
   const by = reg.submittedBy ? await User.findById(reg.submittedBy).select('name').lean() : null
   const sName = new Map(data.students.map(s => [String(s._id), `${s.name} (${s.regNo})`]))
-  const absentees = body.filter(r => r.slice(5).includes('A')).length
+  const absentees = body.filter(r => r.slice(STUDENT_COLS.length).includes('A')).length
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface p-3 text-sm">
@@ -132,14 +132,14 @@ async function Locked({ day, reg, meId, canPost, canApprove, superadmin, scope }
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="border-b border-line bg-subtle/70">
-            <tr>{head[0].slice(0, 5).map(h => <th key={h} rowSpan={3} className="th border-r border-line">{h}</th>)}{cols.map((c, i) => <th key={i} className="th text-center">{c.kind === 'period' ? c.p.no : ''}</th>)}</tr>
+            <tr>{head[0].slice(0, STUDENT_COLS.length).map(h => <th key={h} rowSpan={3} className="th border-r border-line">{h}</th>)}{cols.map((c, i) => <th key={i} className="th text-center">{c.kind === 'period' ? c.p.no : ''}</th>)}</tr>
             <tr>{cols.map((c, i) => <th key={i} className="px-2 text-center text-[11px] font-normal text-muted">{c.kind === 'period' ? span(c.p) : span(c)}</th>)}</tr>
             <tr><th colSpan={cols.length} className="px-2 pb-2 text-center text-xs font-semibold">{day.split('-').reverse().join('.')}</th></tr>
           </thead>
           <tbody className="divide-y divide-line">
             {body.map(r => (
               <tr key={r[1]}>
-                {r.map((v, i) => <td key={i} className={`td ${i >= 5 ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
+                {r.map((v, i) => <td key={i} className={`td ${i >= STUDENT_COLS.length ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
               </tr>
             ))}
           </tbody>

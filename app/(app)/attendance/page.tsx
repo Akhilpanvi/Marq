@@ -9,7 +9,7 @@ import { attendancePct } from '@/lib/scoring'
 import { Attendance, Batch, Student, TrainingSession, User } from '@/models'
 import { Badge, Card, Grid, PageHeader, Score, Stat, Table } from '@/components/ui'
 import { Filters, Select, sp } from '@/components/list'
-import { Bars } from '@/components/charts'
+import { AttendanceDays } from '@/components/attendance-days'
 
 export const metadata = { title: 'Attendance' }
 type C = { present?: number; absent?: number; late?: number; excused?: number }
@@ -29,9 +29,12 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const scope = await visibleBatches(me)
   const bOpts = (await batchOptions()).filter(([id]) => !scope || scope.some(b => String(b) === id))
 
-  const [byStudent, byMonth, bySession, corrections] = await Promise.all([
+  const [byStudent, byDay, bySession, corrections] = await Promise.all([
     Attendance.aggregate<{ _id: { s: Types.ObjectId; st: string }; n: number }>([{ $match: match }, { $group: { _id: { s: '$student', st: '$status' }, n: { $sum: 1 } } }]),
-    Attendance.aggregate<{ _id: { m: string; st: string }; n: number }>([{ $match: match }, { $group: { _id: { m: { $dateToString: { format: '%Y-%m', date: '$date', timezone: 'Asia/Kolkata' } }, st: '$status' }, n: { $sum: 1 } } }]),
+    Attendance.aggregate<{ _id: string; held: number; attended: number; absentees: Types.ObjectId[] }>([
+      { $match: { ...match, status: { $ne: 'excused' } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone: 'Asia/Kolkata' } }, held: { $sum: 1 }, attended: { $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 0, 1] } }, absentees: { $addToSet: { $cond: [{ $eq: ['$status', 'absent'] }, '$student', '$$REMOVE'] } } } },
+    ]),
     Attendance.aggregate<{ _id: { s: Types.ObjectId; st: string }; n: number }>([{ $match: match }, { $group: { _id: { s: '$session', st: '$status' }, n: { $sum: 1 } } }]),
     Attendance.find({ ...match, 'history.0': { $exists: true } }).sort({ updatedAt: -1 }).limit(15).lean(),
   ])
@@ -42,9 +45,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const totals = byStudent.reduce<C>((t, r) => ({ ...t, [r._id.st]: (t[r._id.st as keyof C] ?? 0) + r.n }), {})
   const overall = attendancePct(totals)
 
-  const months = new Map<string, Record<string, number | string>>()
-  for (const r of byMonth) months.set(r._id.m, { month: r._id.m, ...months.get(r._id.m), [r._id.st]: r.n })
-  const monthRows = [...months.values()].sort((a, b) => String(a.month).localeCompare(String(b.month))).map(m => ({ ...m, pct: Math.round(attendancePct(m as C) ?? 0) }))
+  const dayTiles = byDay.map(d => ({ day: d._id, attended: d.attended, held: d.held, note: d.absentees.length ? `${d.absentees.length} absent` : 'no absentees', href: `/attendance/register?day=${d._id}` }))
+  const below = [...per].filter(([, c]) => (attendancePct(c) ?? 100) < 75).length
 
   const sessAgg = new Map<string, C>()
   for (const r of bySession) sessAgg.set(String(r._id.s), { ...sessAgg.get(String(r._id.s)), [r._id.st]: r.n })
@@ -76,8 +78,9 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
         <Stat label="Late" value={totals.late ?? 0} />
         <Stat label="Absent" value={totals.absent ?? 0} hint={`${totals.excused ?? 0} excused`} />
       </Grid>
-      <Card title="Monthly attendance" className="my-6">
-        <Bars data={monthRows} x="month" stacked series={[{ key: 'present', label: 'Present' }, { key: 'absent', label: 'Absent' }, { key: 'excused', label: 'Excused' }, { key: 'late', label: 'Late' }]} />
+      <Card title="Day-wise attendance" className="my-6" action={<span className={`text-xs ${below ? 'text-red-600' : 'text-muted'}`}>{below} student{below === 1 ? '' : 's'} below 75%</span>}>
+        <p className="mb-3 text-xs text-muted">Periods attended out of periods held, across the cohort, for each day. Click a day to open its register.</p>
+        <AttendanceDays days={dayTiles} />
       </Card>
       <Card pad={false}>
         <Filters params={params} q={false}>
