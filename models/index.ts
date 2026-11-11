@@ -159,7 +159,8 @@ export const TrainingSession = model('TrainingSession', sessionSchema)
 // Cohort-wide period attendance for one IST day, posted once and then locked.
 const registerSchema = new Schema(
   {
-    day: { type: String, required: true, unique: true }, // YYYY-MM-DD (IST)
+    day: { type: String, required: true }, // YYYY-MM-DD (IST)
+    batch: { type: ObjectId, ref: 'Batch', index: true }, // one register per batch per day
     periods: [{ _id: false, no: Number, start: String, end: String }],
     students: Number,
     absences: Number,
@@ -181,6 +182,7 @@ const registerSchema = new Schema(
   },
   ts,
 )
+registerSchema.index({ day: 1, batch: 1 }, { unique: true })
 export const DailyRegister = model('DailyRegister', registerSchema)
 
 const correction = { from: String, to: String, by: { type: ObjectId, ref: 'User' }, at: { type: Date, default: Date.now }, reason: String }

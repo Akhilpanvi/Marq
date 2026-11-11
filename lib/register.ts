@@ -8,9 +8,18 @@ import { safeCell } from './sheet'
 const dmy = (day: string) => day.split('-').reverse().join('.')
 export const STUDENT_COLS = ['Sl No.', 'Student ID NO', 'Parent Branch', 'Branch', 'Student Name', 'Placement Mail ID']
 
-/** Marks of every register in [from, to] (inclusive, YYYY-MM-DD), limited to `scope` students when given. */
-export async function loadRegisters(from?: string, to?: string, scope?: Types.ObjectId[] | null) {
-  const regs = await DailyRegister.find({ ...(from || to ? { day: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : {}) }).sort({ day: 1 }).lean()
+/** Old installs had one register per day (unique "day"); registers are now per batch per day. Idempotent. */
+let indexesFixed = false
+export async function fixRegisterIndexes() {
+  if (indexesFixed) return
+  await DailyRegister.collection.dropIndex('day_1').catch(() => {})
+  await DailyRegister.collection.createIndex({ day: 1, batch: 1 }, { unique: true }).catch(() => {})
+  indexesFixed = true
+}
+
+/** Marks of every register in [from, to] (inclusive, YYYY-MM-DD), for one batch or all, limited to `scope` students when given. */
+export async function loadRegisters(from?: string, to?: string, scope?: Types.ObjectId[] | null, batch?: Types.ObjectId | string | null) {
+  const regs = await DailyRegister.find({ ...(from || to ? { day: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : {}), ...(batch ? { batch } : {}) }).sort({ day: 1 }).lean()
   const sessions = await TrainingSession.find({ register: { $in: regs.map(r => r._id) } }).select('register start').lean()
   const marks = await Attendance.find({ session: { $in: sessions.map(s => s._id) }, ...(scope ? { student: { $in: scope } } : {}) }).select('session student status history').lean()
   const sessionOf = new Map(sessions.map(s => [String(s._id), s]))
@@ -28,7 +37,14 @@ export async function loadRegisters(from?: string, to?: string, scope?: Types.Ob
     byP.set(p.no, m.status)
     if (m.history.length) corrected.add(`${m.student}|${reg.day}|${p.no}`)
   }
-  return { regs: regs.map(r => ({ ...r, periods: r.periods as Period[] })), students, status, corrected }
+  // several batches on one day → one column group per day (a student is in one batch, so marks never collide)
+  const byDay = new Map<string, { day: string; periods: Period[] }>()
+  for (const r of regs) {
+    const d = byDay.get(r.day) ?? byDay.set(r.day, { day: r.day, periods: [] }).get(r.day)!
+    for (const p of r.periods as Period[]) if (!d.periods.some(x => x.no === p.no)) d.periods.push(p)
+    d.periods.sort((a, b) => a.no - b.no)
+  }
+  return { regs: [...byDay.values()], students, status, corrected }
 }
 
 const mark = (st?: string) => (st === 'absent' ? 'A' : st === 'excused' ? 'E' : st ? 'P' : '')

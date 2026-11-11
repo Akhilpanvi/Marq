@@ -24,7 +24,7 @@ type Item = {
 const dmy = (d: string) => d.split('-').reverse().join('.')
 
 /** Upload many register sheets at once: each file's date is read from the sheet (or its file name). */
-export function RegisterBulk({ students, maxDay }: { students: S[]; maxDay: string }) {
+export function RegisterBulk({ students, maxDay, batch, batchName }: { students: S[]; maxDay: string; batch: string; batchName: string }) {
   const router = useRouter()
   const [items, setItems] = useState<Item[]>([])
   const [pending, start] = useTransition()
@@ -53,6 +53,7 @@ export function RegisterBulk({ students, maxDay }: { students: S[]; maxDay: stri
         setProgress(`Reading ${i + 1} of ${list.length}: ${f.name}`)
         const fd = new FormData()
         fd.set('file', f)
+        fd.set('batch', batch)
         const key = `${f.name}-${f.size}-${f.lastModified}`
         const r = await readRegisterFile(null, fd)
         if (r?.error || !r?.data) { out.push({ key, file: f.name, day: '', periods: [], absent: {}, read: 0, notes: [], posted: false, error: r?.error ?? 'Could not read' }); continue }
@@ -64,7 +65,7 @@ export function RegisterBulk({ students, maxDay }: { students: S[]; maxDay: stri
           if (s && a.length) absent[s.id] = a
         }
         const notes = [...p.warnings.filter(w => !/No date found/.test(w))]
-        if (p.unknown.length) notes.push(`${p.unknown.length} ID(s) not in MARQ were ignored`)
+        if (p.unknown.length) notes.push(`${p.unknown.length} ID(s) not in batch ${batchName} were ignored`)
         const missing = students.filter(s => !(s.regNo in p.marks)).length
         if (missing) notes.push(`${missing} student(s) not in the sheet → present`)
         out.push({
@@ -83,7 +84,7 @@ export function RegisterBulk({ students, maxDay }: { students: S[]; maxDay: stri
       for (const [i, it] of ready.entries()) {
         setProgress(`Saving ${i + 1} of ${ready.length}: ${dmy(it.day)}`)
         const fd = new FormData()
-        fd.set('payload', JSON.stringify({ day: it.day, periods: it.periods, absent: it.absent }))
+        fd.set('payload', JSON.stringify({ day: it.day, batch, periods: it.periods, absent: it.absent }))
         const r = await submitRegister(null, fd)
         if (!r?.error) saved++
         setItems(cur => cur.map(c => (c.key === it.key ? { ...c, result: r?.error ? r.error : 'saved' } : c)))
@@ -138,7 +139,7 @@ export function RegisterBulk({ students, maxDay }: { students: S[]; maxDay: stri
 
       <dialog ref={dialog} className="card m-auto w-[calc(100%-2rem)] max-w-2xl p-0 text-fg" onClick={e => e.target === dialog.current && dialog.current.close()}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="font-semibold">Verify {ready.length} day{ready.length === 1 ? '' : 's'}</h2>
+          <h2 className="font-semibold">Verify {ready.length} day{ready.length === 1 ? '' : 's'} · {batchName}</h2>
           <button type="button" className="btn-ghost px-2" aria-label="Close" onClick={() => dialog.current?.close()}><X className="size-4" /></button>
         </div>
         <div className="max-h-[60vh] space-y-4 overflow-y-auto p-5">

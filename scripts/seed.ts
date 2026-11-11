@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 import { db } from '../lib/db'
 import { hashPassword, passwordIssue } from '../lib/password'
 import { DEFAULT_ROLES } from '../lib/rbac'
-import { Role, Setting, Student, User } from '../models'
+import { Batch, DailyRegister, Program, Role, Setting, Student, User } from '../models'
 
 export async function seedRoles() {
   for (const r of DEFAULT_ROLES)
@@ -31,6 +31,21 @@ const ADDED_PERMS: Record<string, string[]> = {}
 
 /** One-time data migrations, recorded in Settings so they never run twice (later edits in Roles are kept). */
 const MIGRATIONS: { id: string; run: () => Promise<void> }[] = [
+  {
+    // the current cohort is batch "A"; the daily register is now marked per batch (one register per batch per day)
+    id: '2026-11-batch-a',
+    run: async () => {
+      await DailyRegister.collection.dropIndex('day_1').catch(() => {})
+      await DailyRegister.collection.createIndex({ day: 1, batch: 1 }, { unique: true })
+      const unassigned = { demo: { $ne: true }, $or: [{ batch: null }, { batch: { $exists: false } }] }
+      if (!(await Student.exists(unassigned))) return console.log('  batch A: no unassigned students — nothing to do')
+      const program = (await Program.findOne().sort({ createdAt: 1 })) ?? (await Program.create({ name: 'Top Notch Marquee 2026', status: 'running' }))
+      const a = (await Batch.findOne({ name: 'A' })) ?? (await Batch.create({ name: 'A', program: program._id }))
+      const r = await Student.updateMany(unassigned, { $set: { batch: a._id } })
+      await DailyRegister.updateMany({ batch: { $exists: false } }, { $set: { batch: a._id } })
+      console.log(`  batch A: ${r.modifiedCount} student(s) assigned`)
+    },
+  },
   {
     // interview scheduling was removed: drop its permissions from stored roles
     id: '2026-11-remove-interviews',

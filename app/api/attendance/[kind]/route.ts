@@ -1,14 +1,14 @@
 import { audit, can, currentUser, rateLimit, scopedStudentIds } from '@/lib/auth'
 import { consolidatedWorkbook, dayRows, dayWorkbook, loadRegisters, summaryRows } from '@/lib/register'
 import { csv } from '@/lib/sheet'
-import { DailyRegister } from '@/models'
+import { Batch, DailyRegister } from '@/models'
 import type { Period } from '@/lib/periods'
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-// /api/attendance/day?day=YYYY-MM-DD&format=xlsx|csv
-// /api/attendance/consolidated?from=&to=&format=xlsx|csv
+// /api/attendance/day?day=YYYY-MM-DD&batch=<id>&format=xlsx|csv
+// /api/attendance/consolidated?from=&to=&batch=<id, optional>&format=xlsx|csv
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
   const me = await currentUser()
   const { kind } = await params
@@ -17,14 +17,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
   const q = new URL(req.url).searchParams
   const format = q.get('format') === 'csv' ? 'csv' : 'xlsx'
   const scope = await scopedStudentIds(me)
+  const bId = /^[a-f0-9]{24}$/i.test(q.get('batch') ?? '') ? q.get('batch')! : null
+  const batch = bId ? await Batch.findById(bId).select('name').lean() : null
+  const tag = batch ? `-${batch.name.replace(/[^\w-]+/g, '_')}` : ''
 
   if (kind === 'day') {
     const day = q.get('day') ?? ''
-    const reg = DAY.test(day) ? await DailyRegister.findOne({ day }).lean() : null
-    if (!reg) return new Response('No register for that day', { status: 404 })
-    const data = await loadRegisters(day, day, scope)
-    const name = `MARQ-attendance-${day}`
-    await audit(me, 'attendance', 'register.export', day, undefined, { format })
+    const reg = DAY.test(day) && batch ? await DailyRegister.findOne({ day, batch: batch._id }).lean() : null
+    if (!reg) return new Response('No register for that batch and day', { status: 404 })
+    const data = await loadRegisters(day, day, scope, batch!._id)
+    const name = `MARQ-attendance${tag}-${day}`
+    await audit(me, 'attendance', 'register.export', `${day} · ${batch!.name}`, undefined, { format })
     if (format === 'csv') {
       const { head, body } = dayRows(day, reg.periods as Period[], data)
       return new Response(csv(head[0], [...head.slice(1), ...body]), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${name}.csv"` } })
@@ -35,8 +38,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
   if (kind === 'consolidated') {
     const from = DAY.test(q.get('from') ?? '') ? q.get('from')! : undefined
     const to = DAY.test(q.get('to') ?? '') ? q.get('to')! : undefined
-    const data = await loadRegisters(from, to, scope)
-    const name = `MARQ-attendance-consolidated${from ? `-${from}` : ''}${to ? `-to-${to}` : ''}`
+    const data = await loadRegisters(from, to, scope, batch?._id)
+    const name = `MARQ-attendance-consolidated${tag}${from ? `-${from}` : ''}${to ? `-to-${to}` : ''}`
     await audit(me, 'attendance', 'register.exportConsolidated', `${from ?? 'start'}..${to ?? 'today'}`, undefined, { format, days: data.regs.length })
     if (format === 'csv') {
       const { head, body } = summaryRows(data)

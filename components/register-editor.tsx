@@ -10,7 +10,7 @@ import { toast } from './toast'
 type S = { id: string; regNo: string; name: string; department: string; specialization: string }
 
 /** Post a day's register: upload or tick, Verify (absentee pop-up), Confirm (saved and locked). */
-export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]; initialDay: string; maxDay: string }) {
+export function RegisterEditor({ students, initialDay, maxDay, batch, batchName }: { students: S[]; initialDay: string; maxDay: string; batch: string; batchName: string }) {
   const router = useRouter()
   const [day, setDay] = useState(initialDay)
   const [periods, setPeriods] = useState<Period[]>(DEFAULT_PERIODS)
@@ -35,6 +35,7 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
   function upload(file: File) {
     const fd = new FormData()
     fd.set('file', file)
+    fd.set('batch', batch)
     start(async () => {
       const r = await readRegisterFile(null, fd)
       if (r?.error) return void toast(r.error, 'error')
@@ -48,10 +49,10 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
       }
       setAbsent(next)
       const msgs = [r!.ok, ...p.warnings]
-      if (p.unknown.length) msgs.push(`${p.unknown.length} ID(s) in the sheet are not MARQ students and were ignored: ${p.unknown.slice(0, 5).join(', ')}${p.unknown.length > 5 ? '…' : ''}`)
+      if (p.unknown.length) msgs.push(`${p.unknown.length} ID(s) in the sheet are not in batch ${batchName} and were ignored: ${p.unknown.slice(0, 5).join(', ')}${p.unknown.length > 5 ? '…' : ''}`)
       if (p.blanks) msgs.push(`${p.blanks} blank cell(s) were taken as present.`)
       const missing = students.filter(s => !(s.regNo in p.marks)).length
-      if (missing) msgs.push(`${missing} active student(s) were not in the sheet and are marked present.`)
+      if (missing) msgs.push(`${missing} student(s) of batch ${batchName} were not in the sheet and are marked present.`)
       setNote(msgs.join(' '))
       toast(r!.ok!)
     })
@@ -59,13 +60,13 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
 
   function confirm() {
     const fd = new FormData()
-    fd.set('payload', JSON.stringify({ day, periods, absent: Object.fromEntries(Object.entries(absent).filter(([, v]) => v.length)) }))
+    fd.set('payload', JSON.stringify({ day, batch, periods, absent: Object.fromEntries(Object.entries(absent).filter(([, v]) => v.length)) }))
     start(async () => {
       const r = await submitRegister(null, fd)
       if (r?.error) return void toast(r.error, 'error')
       dialog.current?.close()
       toast(r!.ok!)
-      router.replace(`/attendance/register?day=${day}`)
+      router.replace(`/attendance/register?day=${day}&batch=${batch}`)
       router.refresh()
     })
   }
@@ -124,7 +125,7 @@ export function RegisterEditor({ students, initialDay, maxDay }: { students: S[]
 
       <dialog ref={dialog} className="card m-auto w-[calc(100%-2rem)] max-w-2xl p-0 text-fg" onClick={e => e.target === dialog.current && dialog.current.close()}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="font-semibold">Verify attendance · {day.split('-').reverse().join('.')}</h2>
+          <h2 className="font-semibold">Verify attendance · {batchName} · {day.split('-').reverse().join('.')}</h2>
           <button type="button" className="btn-ghost px-2" aria-label="Close" onClick={() => dialog.current?.close()}><X className="size-4" /></button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-5">

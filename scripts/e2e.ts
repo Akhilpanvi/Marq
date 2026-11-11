@@ -569,7 +569,14 @@ try {
     const file = join(tmp, `attendance ${d}.xlsx`)
     await wb.xlsx.writeFile(file)
 
+    // the register is marked per batch: put the whole test cohort in Batch A, then choose it
+    const batchA = await mongoose.connection.collection('batches').findOne({ name: 'Batch A' })
+    await mongoose.connection.collection('students').updateMany({ regNo: { $in: ['2300030003', '2300030004'] } }, { $set: { batch: batchA!._id } })
+    ;(globalThis as Record<string, unknown>).regBatch = String(batchA!._id)
     await aa.goto('/attendance/register')
+    await aa.getByText('Which batch are you marking attendance for?').waitFor()
+    await aa.getByRole('link', { name: /Batch A/ }).click()
+    await aa.getByText('change batch').waitFor()
     await aa.setInputFiles('input[type=file]:not([multiple])', file)
     await toast(aa, /Read 4 students for/)
     const iso = d.split('.').reverse().join('-')
@@ -581,7 +588,7 @@ try {
     await v.getByText('3, 4').waitFor() // Bharat
     await v.getByRole('button', { name: 'Confirm & lock' }).click()
     await toast(aa, /saved and locked/)
-    await aa.getByText(/Posted by .* · locked/).waitFor()
+    await aa.getByText(/posted by .* · locked/).waitFor()
     assert.equal(await aa.getByRole('button', { name: 'Verify' }).count(), 0)
     const marks = await mongoose.connection.collection('attendances').countDocuments({ date: { $gte: new Date(`${iso}T00:00:00+05:30`) }, status: 'absent' })
     assert.equal(marks, 8) // 2 + 6
@@ -590,7 +597,7 @@ try {
 
   await step('Locked register: change needs a reason, assistant cannot approve, Director approves, history kept', async () => {
     const iso = (globalThis as Record<string, unknown>).regDay as string
-    await aa.goto(`/attendance/register?day=${iso}`)
+    await aa.goto(`/attendance/register?day=${iso}&batch=${(globalThis as Record<string, unknown>).regBatch}`)
     const d = await open(aa, 'Request change')
     await d.locator('select[name=student]').selectOption({ label: '2300030002 · Bharat Kumar' })
     await d.locator('select[name=period]').selectOption('3')
@@ -602,13 +609,13 @@ try {
     const dir = await login(staff.Director)
     await dir.goto('/notifications')
     await dir.getByText(/Attendance change awaiting approval/).waitFor()
-    await dir.goto(`/attendance/register?day=${iso}`)
+    await dir.goto(`/attendance/register?day=${iso}&batch=${(globalThis as Record<string, unknown>).regBatch}`)
     await dir.getByRole('button', { name: 'Approve' }).click()
     await toast(dir, 'Approved and applied')
     const bharat = await mongoose.connection.collection('students').findOne({ regNo: '2300030002' })
     const absentNow = await mongoose.connection.collection('attendances').countDocuments({ student: bharat!._id, date: { $gte: new Date(`${iso}T00:00:00+05:30`) }, status: 'absent' })
     assert.equal(absentNow, 1)
-    const day = await (await dir.request.get(`/api/attendance/day?day=${iso}&format=csv`)).text()
+    const day = await (await dir.request.get(`/api/attendance/day?day=${iso}&batch=${(globalThis as Record<string, unknown>).regBatch}&format=csv`)).text()
     assert.match(day, /Lunch Break/)
     assert.match(day, /"Student Name","Placement Mail ID"/)
     assert.match(day, /"Chitra Devi","[^"]*","A","A","A","A","Lunch Break","A","A"/)
@@ -620,7 +627,7 @@ try {
 
     // Excused: only the Director, only on a posted day, only absent periods
     assert.equal(await aa.getByRole('button', { name: 'Mark excused' }).count(), 0)
-    await dir.goto(`/attendance/register?day=${iso}`)
+    await dir.goto(`/attendance/register?day=${iso}&batch=${(globalThis as Record<string, unknown>).regBatch}`)
     const ex = await open(dir, 'Mark excused')
     await ex.locator('select[name=student]').selectOption({ label: '2300030003 · Chitra Devi' })
     await ex.locator('select[name=period]').selectOption('3')
@@ -629,7 +636,7 @@ try {
     await toast(dir, '1 period marked excused.')
     const chitra = await mongoose.connection.collection('students').findOne({ regNo: '2300030003' })
     assert.equal(await mongoose.connection.collection('attendances').countDocuments({ student: chitra!._id, status: 'excused' }), 1)
-    assert.match(await (await dir.request.get(`/api/attendance/day?day=${iso}&format=csv`)).text(), /"Chitra Devi","[^"]*","E","A"/)
+    assert.match(await (await dir.request.get(`/api/attendance/day?day=${iso}&batch=${(globalThis as Record<string, unknown>).regBatch}&format=csv`)).text(), /"Chitra Devi","[^"]*","E","A"/)
     await dir.context().close()
   })
 
@@ -651,7 +658,7 @@ try {
       return { file, iso: d.split('.').reverse().join('-') }
     }
     const a = await sheet(2, ['2300030004']), b = await sheet(3, []), again = await sheet(1, [])
-    await aa.goto('/attendance/register')
+    await aa.goto(`/attendance/register?batch=${(globalThis as Record<string, unknown>).regBatch}`)
     await aa.getByText('Upload attendance — multiple files / dates').click()
     await aa.setInputFiles('input[type=file][multiple]', [a.file, b.file, again.file])
     await aa.getByText('Already posted — will be skipped').waitFor({ timeout: 20_000 })
