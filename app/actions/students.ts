@@ -1,11 +1,11 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { audit, guard } from '@/lib/auth'
+import { assertStudentAccess, audit, guard } from '@/lib/auth'
 import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, photoLink, REGNO, str, type State } from '@/lib/form'
 import { normalise, readSheet } from '@/lib/sheet'
 import { issueLink } from '@/lib/tokens'
 import { hasPerm } from '@/lib/rbac'
-import { Application, Attendance, AssessmentResult, Batch, Role, Student, User } from '@/models'
+import { Application, Attendance, AssessmentResult, Batch, CodingStat, Evaluation, Notification, Role, ScoreSnapshot, Student, User } from '@/models'
 
 const STATUSES = ['active', 'on_hold', 'withdrawn', 'completed'] as const
 
@@ -43,19 +43,28 @@ export async function saveStudent(_: State, fd: FormData): Promise<State> {
   })
 }
 
+/** Permanently deletes a student and everything tied to them (login, attendance, marks, coding, applications, evaluations). */
 export async function deleteStudent(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const me = await guard('students.delete')
     const id = oid(fd, 'id')
+    if (!id) throw new Invalid('Student not found.')
+    await assertStudentAccess(me, id)
     const s = await Student.findById(id).lean()
     if (!s) throw new Invalid('Student not found.')
-    const history = (await Attendance.exists({ student: id })) || (await AssessmentResult.exists({ student: id })) || (await Application.exists({ student: id }))
-    if (history) throw new Invalid('This student has training or placement history. Set their status to Withdrawn instead, so records stay intact.')
-    await User.deleteMany({ student: id, status: 'invited' })
+    if (str(fd, 'confirm', 40).toUpperCase() !== s.regNo) throw new Invalid(`Type ${s.regNo} to confirm.`)
+    const users = await User.find({ student: id }).distinct('_id')
+    const [att, res, apps, evals, coding] = await Promise.all([
+      Attendance.deleteMany({ student: id }), AssessmentResult.deleteMany({ student: id }), Application.deleteMany({ student: id }),
+      Evaluation.deleteMany({ student: id }), CodingStat.deleteMany({ student: id }),
+      ScoreSnapshot.deleteMany({ student: id }), Notification.deleteMany({ user: { $in: users } }),
+    ])
+    await User.deleteMany({ student: id })
     await Student.deleteOne({ _id: id })
-    await audit(me, 'students', 'student.delete', id, s)
+    const removed = { accounts: users.length, attendance: att.deletedCount, results: res.deletedCount, applications: apps.deletedCount, evaluations: evals.deletedCount, coding: coding.deletedCount }
+    await audit(me, 'students', 'student.delete', id, { regNo: s.regNo, name: s.name, email: s.email }, removed)
     revalidatePath('/students')
-    return { ok: 'Student deleted.' }
+    return { ok: `${s.name} (${s.regNo}) and all their records were deleted.` }
   })
 }
 

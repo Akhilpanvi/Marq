@@ -732,6 +732,23 @@ try {
     assert.equal(st?.specialization, 'CSE-H')
   })
 
+  await step('Delete student: confirmed by typing the ID; profile and linked records removed; audited', async () => {
+    const st = await mongoose.connection.collection('students').findOne({ regNo: '2300031111' })
+    await mongoose.connection.collection('codingstats').insertOne({ student: st!._id, platform: 'leetcode', handle: 'x', points: 10 })
+    await aa.goto(`/students/${st!._id}`)
+    await aa.getByRole('button', { name: 'Delete student' }).click()
+    const d = aa.locator('dialog[open]')
+    const del = d.getByRole('button', { name: 'Delete permanently' })
+    assert.equal(await del.isDisabled(), true)
+    await d.getByLabel('Type the student ID to confirm').fill('2300031111')
+    await del.click()
+    await aa.waitForURL('**/students')
+    await toast(aa, /Roster Student \(2300031111\) and all their records were deleted/)
+    assert.equal(await mongoose.connection.collection('students').countDocuments({ regNo: '2300031111' }), 0)
+    assert.equal(await mongoose.connection.collection('codingstats').countDocuments({ student: st!._id }), 0)
+    assert.equal(await mongoose.connection.collection('auditlogs').countDocuments({ action: 'student.delete', target: String(st!._id) }), 1)
+  })
+
   await step('Every navigation page renders without server errors for Super Admin', async () => {
     for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)

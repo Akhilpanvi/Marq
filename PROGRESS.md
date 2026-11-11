@@ -12,7 +12,7 @@ _Last updated: 11 Nov 2026_
 | 2 | Account activation & password reset (one-time links, SMTP optional) | Done | e2e: every account activated via link; email path not exercised (no SMTP in test) |
 | 3 | User management (create, edit, deactivate/reactivate, invite/reset links, last login, creation history) | Done | e2e: 8 staff accounts, escalation blocked, deactivate |
 | 4 | Roles & permissions (10 built-in roles, custom roles, permission matrix, scopes) | Done | e2e: custom role created, built-in role saved |
-| 5 | Student management (CRUD, filters, bulk batch/mentor/status; picture = Drive link or GitHub avatar, never stored) | Done | e2e: roster, filters, GitHub avatar shown |
+| 5 | Student management (CRUD, permanent delete confirmed by typing the ID, filters, bulk batch/mentor/status; picture = Drive link or GitHub avatar, never stored) | Done | e2e: roster, filters, GitHub avatar shown |
 | 6 | Bulk import (template, xlsx/csv, row validation, duplicates, preview, confirm, summary, failed-records download, update mode) | Done | e2e: 7-row file incl. duplicate/invalid email/unknown batch, re-import updates |
 | 7 | Bulk account creation + activation tracking | Done | e2e: 4 accounts, links CSV has no passwords |
 | 8 | Training (programmes, batches, trainer allocation, sessions, topics, materials, completion, session feedback) | Done | e2e: programme/batches/session; feedback form covered by build + manual |
@@ -62,7 +62,7 @@ _Last updated: 11 Nov 2026_
 ## Testing status
 
 - `npm test` — scoring unit checks: pass.
-- `npm run test:e2e` — 36 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npm run test:e2e` — 37 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
 - `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Architectural decisions

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { avatarSrc } from '@/lib/avatar'
-import { Activity, BookOpen, Briefcase, CalendarCheck, ClipboardCheck, MessagesSquare, Pencil, Trash2, UserRound } from 'lucide-react'
+import { Activity, BookOpen, Briefcase, CalendarCheck, ClipboardCheck, MessagesSquare, Pencil, UserRound } from 'lucide-react'
 import { can, requirePage, studentScope } from '@/lib/auth'
 import { OID } from '@/lib/form'
 import { journey } from '@/lib/journey'
@@ -11,14 +11,15 @@ import { CodingStat, Student, User } from '@/models'
 import { PLATFORMS, PLATFORM_KEYS } from '@/lib/coding-points'
 import { fmt } from '@/lib/format'
 import { Avatar, Badge, Card, Empty, KV, PageHeader, Score, Table } from '@/components/ui'
-import { ActionButton, ActionForm, Modal } from '@/components/form'
+import { ActionForm, Modal } from '@/components/form'
 import { StudentFields, STATUS_LABEL } from '@/components/student-fields'
 import { ScoreTiles } from '@/components/score-tiles'
 import { Bars, Lines } from '@/components/charts'
 import { EvaluationFields } from '@/components/evaluation-fields'
 import { EvaluationList } from '@/components/evaluation-list'
 import { PrintButton } from '@/components/print'
-import { deleteStudent, saveStudent } from '@/app/actions/students'
+import { saveStudent } from '@/app/actions/students'
+import { DeleteStudent } from '@/components/delete-student'
 import { saveEvaluation } from '@/app/actions/mentorship'
 import { sendLink } from '@/app/actions/users'
 
@@ -73,7 +74,7 @@ export default async function Student360({ params }: { params: Promise<{ id: str
             <ActionForm action={saveEvaluation} submit="Save evaluation"><EvaluationFields student={String(s._id)} /></ActionForm>
           </Modal>
         )}
-        {show('students.delete') && <ActionButton action={deleteStudent} fields={{ id: String(s._id) }} className="btn-ghost text-red-600" confirm={`Delete ${s.name}? This cannot be undone.`}><Trash2 className="size-4" /></ActionButton>}
+        {show('students.delete') && <DeleteStudent id={String(s._id)} name={s.name} regNo={s.regNo} />}
       </PageHeader>
 
       <div className="space-y-6">
