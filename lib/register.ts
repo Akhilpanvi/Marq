@@ -137,35 +137,46 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
   sum.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...data.regs.map(() => ({ width: 13 })), { width: 11 }, { width: 14 }, { width: 12 }, { width: 13 }]
   sum.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 1 }]
 
-  // Detailed: every day × period, P/A
-  const det = wb.addWorksheet('Detailed')
-  const dayHead = [...STUDENT_COLS], pHead = [...STUDENT_COLS.map(() => '')]
+  // Day-wise: the college sheet for every day side by side (period no. / time / date, Lunch Break), consolidation last
+  const det = wb.addWorksheet('Day-wise', { properties: { tabColor: { argb: 'FFA41C24' } } })
+  const blocks = data.regs.map(r => ({ day: r.day, cols: columns(r.periods) }))
+  const rNo = [...STUDENT_COLS], rTime = [...STUDENT_COLS.map(() => '')], rDate = [...STUDENT_COLS.map(() => '')]
   const spans: [number, number][] = []
-  for (const r of data.regs) {
-    spans.push([dayHead.length + 1, dayHead.length + r.periods.length])
-    r.periods.forEach((p, i) => (dayHead.push(i ? '' : dmy(r.day)), pHead.push(`P${p.no}`)))
+  for (const b of blocks) {
+    spans.push([rNo.length + 1, rNo.length + b.cols.length])
+    b.cols.forEach((c, i) => {
+      rNo.push(c.kind === 'period' ? String(c.p.no) : '')
+      rTime.push(c.kind === 'period' ? span(c.p) : span(c))
+      rDate.push(i ? '' : dmy(b.day))
+    })
   }
-  dayHead.push('Held', 'Attended', 'Attendance %'); pHead.push('', '', '')
-  det.addRow(dayHead)
-  det.addRow(pHead)
-  styleHeader(det, 2, STUDENT_COLS.length)
-  for (const [a, b] of spans) if (b > a) det.mergeCells(1, a, 1, b)
-  const n = dayHead.length
-  for (const i of [n - 2, n - 1, n]) det.mergeCells(1, i, 2, i)
+  const TOTALS = ['Total Held', 'Total Attended', 'Total Absent', 'Excused', 'Attendance %']
+  rNo.push(...TOTALS); rTime.push(...TOTALS.map(() => '')); rDate.push(...TOTALS.map(() => ''))
+  det.addRow(rNo); det.addRow(rTime); det.addRow(rDate)
+  styleHeader(det, 3, STUDENT_COLS.length)
+  const n = rNo.length
+  for (const [a, b] of spans) if (b > a) det.mergeCells(3, a, 3, b) // date across each day's block
+  for (let i = n - TOTALS.length + 1; i <= n; i++) det.mergeCells(1, i, 3, i)
+  for (let r = 1; r <= 3; r++) for (let i = n - TOTALS.length + 1; i <= n; i++) det.getRow(r).getCell(i).fill = fill(HEAD)
   data.students.forEach((s, i) => {
-    const cells = data.regs.flatMap(r => r.periods.map(p => mark(data.status.get(String(s._id))?.get(r.day)?.get(p.no))))
-    const held = cells.filter(c => c === 'P' || c === 'A').length, att = cells.filter(c => c === 'P').length
-    const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cells, held, att, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
+    const marks = blocks.flatMap(b => b.cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(b.day)?.get(c.p.no)))))
+    const held = marks.filter(c => c === 'P' || c === 'A').length, att = marks.filter(c => c === 'P').length
+    const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...marks, held, att, held - att, marks.filter(c => c === 'E').length, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
     row.eachCell({ includeEmpty: true }, (c, j) => {
       c.border = border
       if (j > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
       else if (c.value === 'E') c.fill = fill(EXCUSED)
+      else if (c.value === 'Lunch Break') c.font = { size: 9, color: { argb: 'FF71717A' } }
     })
-    row.getCell(n).numFmt = '0.00"%"'
+    const pc = row.getCell(n)
+    pc.numFmt = '0.00"%"'
+    pc.font = { bold: true }
+    if (typeof pc.value === 'number' && pc.value < 75) pc.fill = fill(ABSENT)
   })
-  det.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...Array.from({ length: n - 5 }, () => ({ width: 6 }))]
-  det.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 2 }]
+  det.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...blocks.flatMap(b => b.cols.map(c => ({ width: c.kind === 'break' ? 12 : 11 }))), ...TOTALS.map(() => ({ width: 12 }))]
+  det.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 3 }]
+  ;(det as unknown as { orderNo: number }).orderNo = 0 // day-wise opens first, summary second
 
   return Buffer.from(await wb.xlsx.writeBuffer())
 }
