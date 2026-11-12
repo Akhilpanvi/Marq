@@ -40,6 +40,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
     Batch.find({ _id: { $in: students.flatMap(s => (s.batch ? [s.batch] : [])) } }).select('name').lean(),
   ])
   const acct = new Map(accounts.map(a => [String(a.student), a.status]))
+  // account totals across the whole (scoped) cohort, not just this page
+  const allIds = await Student.find({ ...(await studentScope(me)), status: 'active' }).distinct('_id')
+  const byStatus = new Map((await User.aggregate<{ _id: string; n: number }>([{ $match: { student: { $in: allIds } } }, { $group: { _id: '$status', n: { $sum: 1 } } }])).map(r => [r._id, r.n]))
+  const nActive = byStatus.get('active') ?? 0, nInvited = byStatus.get('invited') ?? 0
+  const nNone = allIds.length - nActive - nInvited - (byStatus.get('inactive') ?? 0)
   const bName = new Map(batchNames.map(b => [String(b._id), b.name]))
   const mName = new Map(mentors)
   const canEdit = can(me, 'students.edit'), canAccounts = can(me, 'users.create')
@@ -55,6 +60,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           </Modal>
         )}
       </PageHeader>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted">Accounts ({allIds.length} active students):</span>
+        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300">Active <b className="tabular-nums">{nActive}</b></span>
+        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">Invited <b className="tabular-nums">{nInvited}</b></span>
+        <span className="rounded-full border border-line bg-subtle px-3 py-1 text-muted">Not registered <b className="tabular-nums text-fg">{nNone}</b></span>
+      </div>
       <Card pad={false}>
         <Filters params={params} placeholder="Search name, registration no or email">
           <Select name="batch" value={batch} options={[['none', 'No batch'], ...batches]} all="All batches" />
