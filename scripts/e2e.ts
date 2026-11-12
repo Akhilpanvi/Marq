@@ -339,10 +339,11 @@ try {
     await s1.getByText('New opportunity: Acme Corp').waitFor()
     await s1.getByText('New mentor feedback').waitFor()
     await s1.goto('/me/jobs')
-    await s1.getByText('still need your status').waitFor()
+    await s1.getByText('answered 0 of 1 drives').waitFor()
     await s1.locator('.card', { hasText: 'Software Engineer' }).getByRole('button', { name: 'Yes, I applied' }).click()
     await toast(s1, /Saved: Applied but no response/)
     await s1.getByText('Applied — waiting to hear back').waitFor()
+    await s1.getByText('You’ve answered all 1 drives').waitFor({ timeout: 10_000 }) // the counter updates without a reload
     await s1.goto('/me/applications')
     const d = await open(s1, /Add application/)
     await d.locator('input[name=company]').fill('acme corp')

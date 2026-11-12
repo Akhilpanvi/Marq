@@ -27,7 +27,9 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   return (
     <>
       <PageHeader title="Job Opportunities" description="Drives published by the placement team. For every drive, answer two quick questions — did you apply, and how far have you reached. Update it whenever something changes; it feeds the programme's placement analysis." />
-      {unanswered > 0 && <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Answer “Did you apply?” on each card below — “No” counts as an answer.</div>}
+      {jobs.length > 0 && (unanswered > 0
+        ? <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">You’ve answered <b>{jobs.length - unanswered} of {jobs.length}</b> drives — <b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Answer “Did you apply?” on each card below — “No” counts as an answer.</div>
+        : <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">✓ You’ve answered all <b>{jobs.length}</b> drives. Update a card whenever something changes.</div>)}
       <Card pad={false} className="mb-6">
         <Filters params={params} placeholder="Search role, skill or location">
           <Select name="company" value={company} options={companies} all="All companies" />
