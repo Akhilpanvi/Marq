@@ -25,7 +25,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (mentor) filter.mentor = mentor === 'none' ? null : mentor
   if (status) filter.status = status
   if (dept) filter.department = dept
-  if (sp(params, 'pm') === 'missing') filter.$or = [{ personalEmail: null }, { personalEmail: '' }]
+  if (sp(params, 'pm') === 'missing') filter.$and = [...((filter.$and as object[]) ?? []), { $or: [{ personalEmail: null }, { personalEmail: '' }] }] // keep the scope's own $or
 
   const [students, total, batches, mentors, departments] = await Promise.all([
     Student.find(filter).sort({ regNo: 1 }).skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean(),
