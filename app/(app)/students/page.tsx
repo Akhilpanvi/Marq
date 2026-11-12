@@ -24,6 +24,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (batch) filter.batch = batch === 'none' ? null : batch
   if (mentor) filter.mentor = mentor === 'none' ? null : mentor
   if (status) filter.status = status
+  else filter.status = { $ne: 'dropped' } // dropped students are only listed when asked for
   if (dept) filter.department = dept
   if (sp(params, 'pm') === 'missing') filter.$and = [...((filter.$and as object[]) ?? []), { $or: [{ personalEmail: null }, { personalEmail: '' }] }] // keep the scope's own $or
 
@@ -46,6 +47,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const byStatus = new Map((await User.aggregate<{ _id: string; n: number }>([{ $match: { student: { $in: allIds } } }, { $group: { _id: '$status', n: { $sum: 1 } } }])).map(r => [r._id, r.n]))
   const nActive = byStatus.get('active') ?? 0, nInvited = byStatus.get('invited') ?? 0
   const nNone = allIds.length - nActive - nInvited - (byStatus.get('inactive') ?? 0)
+  const nDropped = await Student.countDocuments({ ...(await studentScope(me)), status: 'dropped' })
   const noPm = await Student.countDocuments({ _id: { $in: allIds }, $or: [{ personalEmail: null }, { personalEmail: '' }] })
   const bName = new Map(batchNames.map(b => [String(b._id), b.name]))
   const mName = new Map(mentors)
@@ -69,6 +71,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         <span className="rounded-full border border-line bg-subtle px-3 py-1 text-muted">Not registered <b className="tabular-nums text-fg">{nNone}</b></span>
         <Link href={sp(params, 'pm') === 'missing' ? '/students' : '/students?pm=missing'} className={`rounded-full border px-3 py-1 ${noPm ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
           No placement mail ID <b className="tabular-nums">{noPm}</b> {sp(params, 'pm') === 'missing' ? '· show all' : noPm ? '· show' : ''}
+        </Link>
+        <Link href={status === 'dropped' ? '/students' : '/students?status=dropped'} className="rounded-full border border-zinc-500/30 bg-zinc-500/10 px-3 py-1 text-muted">
+          Dropped (D) <b className="tabular-nums text-fg">{nDropped}</b> {status === 'dropped' ? '· show all' : nDropped ? '· show' : ''}
         </Link>
       </div>
       <Card pad={false}>
@@ -99,7 +104,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                 <td className="td"><Score value={p?.overall} /></td>
                 <td className="td"><Score value={p?.dims.attendance} /></td>
                 <td className="td">{a ? <Badge tone={a === 'active' ? 'green' : a === 'invited' ? 'amber' : 'zinc'}>{a}</Badge> : <span className="text-xs text-muted">none</span>}</td>
-                <td className="td"><Badge tone={s.status === 'active' ? 'green' : s.status === 'withdrawn' ? 'red' : 'zinc'}>{STATUS_LABEL[s.status ?? 'active']}</Badge></td>
+                <td className="td"><Badge tone={s.status === 'active' ? 'green' : s.status === 'withdrawn' || s.status === 'dropped' ? 'red' : 'zinc'}>{STATUS_LABEL[s.status ?? 'active']}</Badge></td>
               </tr>
             )
           })}

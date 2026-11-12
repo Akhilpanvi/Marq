@@ -30,7 +30,7 @@ export default async function Overview() {
   const sMatch = ids ? { student: { $in: ids } } : {}
   const batchScope = await visibleBatches(me)
   const [students, prof, m, attDaily, catAvg, conducted, upcomingSessions, batches, recent, placed, answered] = await Promise.all([
-    can(me, 'students.view') ? Student.find(scope).select('name regNo status batch').lean() : [],
+    can(me, 'students.view') ? Student.find({ ...scope, status: { $ne: 'dropped' } }).select('name regNo status batch').lean() : [],
     can(me, 'performance.view') ? profiles(ids) : new Map(),
     can(me, 'applications.view') ? appMetrics(sMatch) : null,
     can(me, 'attendance.view')

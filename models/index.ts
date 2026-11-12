@@ -110,7 +110,9 @@ const studentSchema = new Schema(
     photoUrl: String, // Google Drive share link; blank → GitHub avatar. Image bytes are never stored.
     batch: { type: ObjectId, ref: 'Batch', index: true },
     mentor: { type: ObjectId, ref: 'User', index: true },
-    status: { type: String, enum: ['active', 'on_hold', 'withdrawn', 'completed'], default: 'active', index: true },
+    status: { type: String, enum: ['active', 'on_hold', 'withdrawn', 'completed', 'dropped'], default: 'active', index: true },
+    // Dropped (Director): attendance shows "D" from this day on; login switched off; left out of every list and count, kept in reports
+    dropped: { day: String, reason: String, by: { type: ObjectId, ref: 'User' }, byName: String, at: Date, userStatus: String },
     // student-maintained
     handles: { leetcode: String, codechef: String, codeforces: String, github: String },
     professional: { headline: String, linkedin: String, github: String, portfolio: String, resume: String, skills: [String] },

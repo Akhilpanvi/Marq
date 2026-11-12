@@ -31,6 +31,7 @@ export async function saveStudent(_: State, fd: FormData): Promise<State> {
     if (id) {
       const before = await Student.findById(id).lean()
       if (!before) throw new Invalid('Student not found.')
+      if (before?.status === 'dropped') delete set.status // only the Director's "Undo dropped" brings a dropped student back
       await Student.updateOne({ _id: id }, { $set: set })
       await audit(me, 'students', 'student.update', id, before, set)
       revalidatePath(`/students/${id}`)
@@ -80,7 +81,7 @@ export async function bulkUpdate(_: State, fd: FormData): Promise<State> {
     if (mentor) set.mentor = mentor === 'none' ? null : oid(fd, 'mentor')
     if (status) set.status = oneOf(fd, 'status', STATUSES)
     if (!Object.keys(set).length) throw new Invalid('Choose a batch, mentor or status to apply.')
-    const r = await Student.updateMany({ _id: { $in: ids } }, { $set: set })
+    const r = await Student.updateMany({ _id: { $in: ids }, ...(set.status ? { status: { $ne: 'dropped' } } : {}) }, { $set: set })
     await audit(me, 'students', 'student.bulkUpdate', `${ids.length} students`, undefined, { ids, ...set })
     revalidatePath('/students')
     return { ok: `Updated ${r.modifiedCount} student${r.modifiedCount === 1 ? '' : 's'}.` }
@@ -265,4 +266,43 @@ export async function confirmImport(_: State, fd: FormData): Promise<State> {
 /** One form, two buttons: the submitter's `op` picks the action. */
 export async function bulkStudents(state: State, fd: FormData): Promise<State> {
   return fd.get('op') === 'accounts' ? createAccounts(state, fd) : bulkUpdate(state, fd)
+}
+
+/* ───────────── Dropped (Director) ───────────── */
+
+/** Director marks a student dropped from a date: attendance shows D from then on, login switched off, left out of lists and counts. */
+export async function dropStudent(_: State, fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('attendance.approve')
+    const id = oid(fd, 'id')
+    const s = id ? await Student.findById(id).select('name regNo status').lean() : null
+    if (!s) throw new Invalid('Student not found.')
+    if (s.status === 'dropped') throw new Invalid(`${s.name} is already marked dropped.`)
+    const day = str(fd, 'day', 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Invalid('Choose the date the student dropped from.')
+    const reason = str(fd, 'reason', 300)
+    if (reason.length < 3) throw new Invalid('Give the reason.')
+    const u = await User.findOne({ student: id }).select('status').lean()
+    await Student.updateOne({ _id: id }, { $set: { status: 'dropped', dropped: { day, reason, by: me._id, byName: me.name, at: new Date(), userStatus: u?.status ?? undefined } } })
+    if (u) await User.updateOne({ _id: u._id }, { $set: { status: 'inactive' }, $inc: { sessionVersion: 1 } }) // no sign-in, no emails or notifications
+    await audit(me, 'students', 'student.dropped', id, { status: s.status }, { status: 'dropped', day, reason })
+    revalidatePath(`/students/${id}`)
+    revalidatePath('/students')
+    return { ok: `${s.name} marked dropped from ${day.split('-').reverse().join('.')}.` }
+  })
+}
+
+export async function undoDropStudent(_: State, fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('attendance.approve')
+    const id = oid(fd, 'id')
+    const s = id ? await Student.findById(id).select('name status dropped').lean() : null
+    if (!s || s.status !== 'dropped') throw new Invalid('This student is not marked dropped.')
+    await Student.updateOne({ _id: id }, { $set: { status: 'active' }, $unset: { dropped: '' } })
+    if (s.dropped?.userStatus) await User.updateOne({ student: id }, { $set: { status: s.dropped.userStatus } })
+    await audit(me, 'students', 'student.undropped', id, { status: 'dropped', day: s.dropped?.day }, { status: 'active' })
+    revalidatePath(`/students/${id}`)
+    revalidatePath('/students')
+    return { ok: `${s.name} is active again.` }
+  })
 }

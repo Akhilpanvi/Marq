@@ -185,8 +185,8 @@ async function Locked({ day, batchName, reg, meId, canPost, canApprove, superadm
           </thead>
           <tbody className="divide-y divide-line">
             {body.map(r => (
-              <tr key={r[1]}>
-                {r.map((v, i) => <td key={i} className={`td ${i >= STUDENT_COLS.length ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : v === 'E' ? 'bg-zinc-500/15 font-semibold text-muted' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
+              <tr key={r[1]} className={r.includes('D') ? 'opacity-50' : ''} title={r.includes('D') ? 'Dropped' : undefined}>
+                {r.map((v, i) => <td key={i} className={`td ${i >= STUDENT_COLS.length ? 'text-center' : ''} ${v === 'A' ? 'bg-red-500/15 font-semibold text-red-700 dark:text-red-300' : v === 'E' || v === 'D' ? 'bg-zinc-500/15 font-semibold text-muted' : ''} ${v === 'Lunch Break' ? 'text-xs text-muted' : ''} ${i === 1 ? 'font-mono text-xs' : ''}`}>{v}</td>)}
               </tr>
             ))}
           </tbody>

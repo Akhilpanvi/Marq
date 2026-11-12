@@ -42,6 +42,7 @@ _Last updated: 11 Nov 2026_
 | 23j | Overview ordered by programme priority: 1 Placement, 2 Coding scores, 3 Attendance, then overall performance | Done | e2e render |
 | 23k | Excused (E): Director-only, on a posted day, absent periods only, with reason + history; excluded from the percentage; E in uploads is read as absent | Done | e2e |
 | 23l | Super Admin “Student View (demo)”: browse the student portal as a demo student hidden from every list, register, report, leaderboard and count; reset + exit | Done | e2e |
+| 23o | Dropped (D): Director marks from a date; attendance shows D from then (greyed), login off, left out of lists/counts, kept in reports; undo | Done | e2e |
 | 23n | Daily Register is per batch: choose the batch first; one locked register per batch per day; downloads per batch; seed puts the current cohort in batch "A" | Done | e2e |
 | 23m | Placement Mail ID in every student download; day-wise attendance tiles replace monthly charts | Done | e2e |
 | 24 | Deployment config (vercel.json, env, cron, health, docs) | Done | live at https://marq.klef.me; GitHub → Vercel auto-deploy |

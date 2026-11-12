@@ -32,4 +32,4 @@ export function StudentFields({ s = {}, batches, mentors }: { s?: S; batches: Op
   )
 }
 
-export const STATUS_LABEL: Record<string, string> = { active: 'Active', on_hold: 'On hold', withdrawn: 'Withdrawn', completed: 'Completed' }
+export const STATUS_LABEL: Record<string, string> = { dropped: 'Dropped (D)', active: 'Active', on_hold: 'On hold', withdrawn: 'Withdrawn', completed: 'Completed' }

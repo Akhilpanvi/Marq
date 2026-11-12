@@ -10,8 +10,8 @@ import { day, pct } from '@/lib/format'
 import { CodingStat, Student, User } from '@/models'
 import { PLATFORMS, PLATFORM_KEYS } from '@/lib/coding-points'
 import { fmt } from '@/lib/format'
-import { Avatar, Badge, Card, Empty, KV, PageHeader, Score, Table } from '@/components/ui'
-import { ActionForm, Modal } from '@/components/form'
+import { Avatar, Badge, Card, Empty, Field, KV, PageHeader, Score, Table } from '@/components/ui'
+import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { StudentFields, STATUS_LABEL } from '@/components/student-fields'
 import { ScoreTiles } from '@/components/score-tiles'
 import { Lines } from '@/components/charts'
@@ -19,7 +19,7 @@ import { AttendanceDays } from '@/components/attendance-days'
 import { EvaluationFields } from '@/components/evaluation-fields'
 import { EvaluationList } from '@/components/evaluation-list'
 import { PrintButton } from '@/components/print'
-import { saveStudent } from '@/app/actions/students'
+import { dropStudent, saveStudent, undoDropStudent } from '@/app/actions/students'
 import { DeleteStudent } from '@/components/delete-student'
 import { saveEvaluation } from '@/app/actions/mentorship'
 import { sendLink } from '@/app/actions/users'
@@ -54,7 +54,8 @@ export default async function Student360({ params }: { params: Promise<{ id: str
               {s.name}
               <span className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-normal">
                 <span className="font-mono text-xs text-muted">{s.regNo}</span>
-                <Badge tone={s.status === 'active' ? 'green' : 'zinc'}>{STATUS_LABEL[s.status ?? 'active']}</Badge>
+                <Badge tone={s.status === 'active' ? 'green' : s.status === 'dropped' ? 'red' : 'zinc'}>{STATUS_LABEL[s.status ?? 'active']}</Badge>
+                {s.status === 'dropped' && s.dropped?.day && <span className="text-xs text-red-600">D from {s.dropped.day.split('-').reverse().join('.')}{s.dropped.reason ? ` · ${s.dropped.reason}` : ''}{s.dropped.byName ? ` · by ${s.dropped.byName}` : ''}</span>}
                 <Badge tone={placed.tone}>{placed.label}</Badge>
                 {j.p.flags.high && <Badge tone="green">High performer</Badge>}
                 {j.p.flags.improving && <Badge tone="blue">Improving</Badge>}
@@ -75,6 +76,18 @@ export default async function Student360({ params }: { params: Promise<{ id: str
             <ActionForm action={saveEvaluation} submit="Save evaluation"><EvaluationFields student={String(s._id)} /></ActionForm>
           </Modal>
         )}
+        {show('attendance.approve') && (s.status === 'dropped'
+          ? <ActionButton action={undoDropStudent} fields={{ id: String(s._id) }} className="btn-outline" confirm={`Make ${s.name} active again? Their attendance stops showing D and their login is restored.`}>Undo dropped</ActionButton>
+          : (
+            <Modal label="Mark dropped (D)" title={`Mark ${s.name} as dropped`} className="btn-outline">
+              <p className="mb-3 text-sm text-muted">Director only. From this date the attendance sheets show <b>D</b> for this student (earlier marks stay). Their login is switched off, they get no emails or notifications, and they are left out of every list and count — but still appear in reports. You can undo this.</p>
+              <ActionForm action={dropStudent} submit="Mark dropped">
+                <input type="hidden" name="id" value={String(s._id)} />
+                <Field label="Dropped from (date)"><input type="date" name="day" required defaultValue={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })} className="input" /></Field>
+                <Field label="Reason"><input name="reason" required minLength={3} placeholder="Left the programme / placed elsewhere / …" className="input" /></Field>
+              </ActionForm>
+            </Modal>
+          ))}
         {show('students.delete') && <DeleteStudent id={String(s._id)} name={s.name} regNo={s.regNo} />}
       </PageHeader>
 

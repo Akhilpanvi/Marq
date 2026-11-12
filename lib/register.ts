@@ -23,7 +23,14 @@ export async function loadRegisters(from?: string, to?: string, scope?: Types.Ob
   const sessions = await TrainingSession.find({ register: { $in: regs.map(r => r._id) } }).select('register start').lean()
   const marks = await Attendance.find({ session: { $in: sessions.map(s => s._id) }, ...(scope ? { student: { $in: scope } } : {}) }).select('session student status history').lean()
   const sessionOf = new Map(sessions.map(s => [String(s._id), s]))
-  const students = await Student.find({ _id: { $in: [...new Set(marks.map(m => String(m.student)))] } }).select('regNo name department specialization personalEmail').sort({ regNo: 1 }).lean()
+  // students with marks, plus dropped students of these registers' batches (their row shows D from the drop day on)
+  const batches = [...new Set(regs.flatMap(r => (r.batch ? [String(r.batch)] : [])))]
+  const who: Record<string, unknown> = { $or: [
+    { _id: { $in: [...new Set(marks.map(m => String(m.student)))] } },
+    ...(batches.length ? [{ status: 'dropped', batch: { $in: batches }, ...(to ? { 'dropped.day': { $lte: to } } : {}), ...(scope ? { _id: { $in: scope } } : {}) }] : []),
+  ] }
+  const students = await Student.find(who).select('regNo name department specialization personalEmail status dropped').sort({ regNo: 1 }).lean()
+  const droppedFrom = new Map(students.filter(s => s.status === 'dropped' && s.dropped?.day).map(s => [String(s._id), s.dropped!.day!]))
   // status[studentId][day][periodNo]
   const status = new Map<string, Map<string, Map<number, string>>>()
   const corrected = new Set<string>()
@@ -44,10 +51,16 @@ export async function loadRegisters(from?: string, to?: string, scope?: Types.Ob
     for (const p of r.periods as Period[]) if (!d.periods.some(x => x.no === p.no)) d.periods.push(p)
     d.periods.sort((a, b) => a.no - b.no)
   }
-  return { regs: [...byDay.values()], students, status, corrected }
+  return { regs: [...byDay.values()], students, status, corrected, droppedFrom }
 }
 
 const mark = (st?: string) => (st === 'absent' ? 'A' : st === 'excused' ? 'E' : st ? 'P' : '')
+type Data = Awaited<ReturnType<typeof loadRegisters>>
+/** P / A / E, or D (dropped) from the student's drop day on. */
+const markOf = (data: Data, sid: string, day: string, no: number) => {
+  const d = data.droppedFrom.get(sid)
+  return d && day >= d ? 'D' : mark(data.status.get(sid)?.get(day)?.get(no))
+}
 
 /** The college sheet: 3 header rows (period no., time, date), P/A cells, Lunch Break column. */
 export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType<typeof loadRegisters>>) {
@@ -57,7 +70,7 @@ export function dayRows(day: string, periods: Period[], data: Awaited<ReturnType
     [...STUDENT_COLS.map(() => ''), ...cols.map(c => (c.kind === 'period' ? span(c.p) : span(c)))],
     [...STUDENT_COLS.map(() => ''), dmy(day), ...cols.slice(1).map(() => '')],
   ]
-  const body = data.students.map((s, i) => [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(day)?.get(c.p.no))))])
+  const body = data.students.map((s, i) => [String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...cols.map(c => (c.kind === 'break' ? 'Lunch Break' : markOf(data, String(s._id), day, c.p.no)))])
   return { head, body, cols }
 }
 
@@ -91,7 +104,7 @@ export async function dayWorkbook(day: string, periods: Period[], data: Awaited<
       c.border = border
       if (i > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
-      else if (c.value === 'E') c.fill = fill(EXCUSED)
+      else if (c.value === 'E' || c.value === 'D') c.fill = fill(EXCUSED)
     })
   ws.columns = [{ width: 7 }, { width: 15 }, { width: 10 }, { width: 9 }, { width: 34 }, { width: 30 }, ...cols.map(() => ({ width: 14 }))]
   ws.views = [{ state: 'frozen', xSplit: STUDENT_COLS.length, ySplit: 3 }]
@@ -104,6 +117,8 @@ export function summaryRows(data: Awaited<ReturnType<typeof loadRegisters>>) {
   const body = data.students.map((s, i) => {
     let held = 0, attended = 0
     const days = data.regs.map(r => {
+      const d = data.droppedFrom.get(String(s._id))
+      if (d && r.day >= d) return 'D'
       const byP = data.status.get(String(s._id))?.get(r.day)
       if (!byP) return '—'
       const vals = [...byP.values()].filter(v => v !== 'excused') // excused periods are not counted
@@ -159,14 +174,14 @@ export async function consolidatedWorkbook(data: Awaited<ReturnType<typeof loadR
   for (let i = n - TOTALS.length + 1; i <= n; i++) det.mergeCells(1, i, 3, i)
   for (let r = 1; r <= 3; r++) for (let i = n - TOTALS.length + 1; i <= n; i++) det.getRow(r).getCell(i).fill = fill(HEAD)
   data.students.forEach((s, i) => {
-    const marks = blocks.flatMap(b => b.cols.map(c => (c.kind === 'break' ? 'Lunch Break' : mark(data.status.get(String(s._id))?.get(b.day)?.get(c.p.no)))))
+    const marks = blocks.flatMap(b => b.cols.map(c => (c.kind === 'break' ? 'Lunch Break' : markOf(data, String(s._id), b.day, c.p.no))))
     const held = marks.filter(c => c === 'P' || c === 'A').length, att = marks.filter(c => c === 'P').length
     const row = det.addRow([String(i + 1), s.regNo, s.department ?? '', s.specialization ?? '', s.name, s.personalEmail ?? '', ...marks, held, att, held - att, marks.filter(c => c === 'E').length, held ? Math.round((att / held) * 10000) / 100 : null].map(v => (typeof v === 'string' ? safeCell(v) : v)))
     row.eachCell({ includeEmpty: true }, (c, j) => {
       c.border = border
       if (j > STUDENT_COLS.length) c.alignment = { horizontal: 'center' }
       if (c.value === 'A') c.fill = fill(ABSENT)
-      else if (c.value === 'E') c.fill = fill(EXCUSED)
+      else if (c.value === 'E' || c.value === 'D') c.fill = fill(EXCUSED)
       else if (c.value === 'Lunch Break') c.font = { size: 9, color: { argb: 'FF71717A' } }
     })
     const pc = row.getCell(n)

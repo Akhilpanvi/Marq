@@ -15,7 +15,7 @@ export default async function Contests({ searchParams }: { searchParams: Promise
   const platform = (PLATFORM_KEYS.includes(sp(params, 'platform') as PlatformKey) ? sp(params, 'platform') : 'leetcode') as PlatformKey
   const s = await Student.findById(me.student).select('batch').lean()
   const scope = sp(params, 'scope') === 'batch' && s?.batch ? 'batch' : 'all'
-  const students = await Student.find({ status: { $ne: 'withdrawn' }, onLeaderboard: { $ne: false }, ...(scope === 'batch' ? { batch: s!.batch } : {}) }).select('name department').lean()
+  const students = await Student.find({ status: { $nin: ['withdrawn', 'dropped'] }, onLeaderboard: { $ne: false }, ...(scope === 'batch' ? { batch: s!.batch } : {}) }).select('name department').lean()
   const stats = await CodingStat.find({ platform, status: 'ok', student: { $in: students.map(x => x._id as Types.ObjectId) }, rating: { $gt: 0 } }).select('student rating maxRating contests lastChange').sort({ rating: -1 }).lean()
   const sName = new Map(students.map(x => [String(x._id), x]))
   const batch = s?.batch ? await Batch.findById(s.batch).select('name').lean() : null

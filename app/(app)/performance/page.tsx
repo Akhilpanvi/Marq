@@ -20,7 +20,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const me = await requirePage('performance.view')
   const params = await searchParams
   const batch = sp(params, 'batch'), flag = sp(params, 'flag') as Flag | '', sort = (sp(params, 'sort') || 'overall') as Dim | 'overall' | 'readiness' | 'trend'
-  const filter: Record<string, unknown> = { ...(await studentScope(me)), status: { $ne: 'withdrawn' } }
+  const filter: Record<string, unknown> = { ...(await studentScope(me)), status: { $nin: ['withdrawn', 'dropped'] } }
   if (batch) filter.batch = batch
   const [students, cfg, bOpts] = await Promise.all([Student.find(filter).select('name regNo batch department').lean(), getScoring(), batchOptions()])
   const prof = await profiles(students.map(s => s._id))

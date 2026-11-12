@@ -26,7 +26,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const [batch, trainer, students, marks, bOpts, tOpts] = await Promise.all([
     Batch.findById(s.batch).lean(),
     s.trainer ? User.findById(s.trainer).select('name').lean() : null,
-    Student.find({ batch: s.batch, status: { $ne: 'withdrawn' } }).select('name regNo').sort({ regNo: 1 }).lean(),
+    Student.find({ batch: s.batch, status: { $nin: ['withdrawn', 'dropped'] } }).select('name regNo').sort({ regNo: 1 }).lean(),
     Attendance.find({ session: s._id }).lean(),
     batchOptions(), trainerOptions(),
   ])

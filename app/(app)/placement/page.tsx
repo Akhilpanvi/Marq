@@ -20,7 +20,7 @@ export default async function PlacementPage() {
   const applied = { ...match, status: { $ne: 'Not Applied' } } // "No, I didn't apply" answers are not applications
   const [m, students, placed, offered, byCompany, monthly, packages, topStudents] = await Promise.all([
     appMetrics(match),
-    Student.countDocuments({ ...sMatch, status: { $ne: 'withdrawn' } }),
+    Student.countDocuments({ ...sMatch, status: { $nin: ['withdrawn', 'dropped'] } }),
     Application.distinct('student', { ...match, status: 'Accepted' }),
     Application.distinct('student', { ...match, status: { $in: OFFERED } }),
     Application.aggregate<{ _id: string; apps: number; offers: number; accepted: number; rejected: number; inProcess: number }>([

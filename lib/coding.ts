@@ -126,7 +126,7 @@ export async function syncStudent(id: Types.ObjectId | string) {
 /** Syncs the stalest students first within a time budget (serverless-friendly). */
 export async function syncStale(budgetMs = 45_000, concurrency = 4) {
   const start = Date.now()
-  const linked = await Student.find({ status: { $ne: 'withdrawn' }, $or: [...PLATFORM_KEYS, 'github'].map(p => ({ [`handles.${p}`]: { $nin: [null, ''] } })) }).select('_id').lean()
+  const linked = await Student.find({ status: { $nin: ['withdrawn', 'dropped'] }, $or: [...PLATFORM_KEYS, 'github'].map(p => ({ [`handles.${p}`]: { $nin: [null, ''] } })) }).select('_id').lean()
   const last = new Map((await CodingStat.aggregate<{ _id: Types.ObjectId; at: Date }>([{ $group: { _id: '$student', at: { $min: '$fetchedAt' } } }])).map(r => [String(r._id), +r.at || 0]))
   const queue = linked.map(s => s._id).sort((a, b) => (last.get(String(a)) ?? 0) - (last.get(String(b)) ?? 0))
   let done = 0
@@ -144,7 +144,7 @@ export const istDay = (d = new Date()) => d.toLocaleDateString('en-CA', { timeZo
 /** Coding points per student (sum over platforms) for everyone on the leaderboard, ranked. */
 export async function standings() {
   const [students, pts] = await Promise.all([
-    Student.find({ status: { $ne: 'withdrawn' }, onLeaderboard: { $ne: false } }).select('name regNo department batch').lean(),
+    Student.find({ status: { $nin: ['withdrawn', 'dropped'] }, onLeaderboard: { $ne: false } }).select('name regNo department batch').lean(),
     CodingStat.aggregate<{ _id: Types.ObjectId; points: number; by: { p: PlatformKey; points: number }[] }>([{ $group: { _id: '$student', points: { $sum: '$points' }, by: { $push: { p: '$platform', points: '$points' } } } }]),
   ])
   const m = new Map(pts.map(p => [String(p._id), p]))

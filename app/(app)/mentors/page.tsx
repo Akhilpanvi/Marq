@@ -19,7 +19,7 @@ export default async function MentorsPage({ searchParams }: { searchParams: Prom
   const params = await searchParams
   const page = pageOf(params)
   const scope = await studentScope(me)
-  const students = await Student.find({ ...scope, status: { $ne: 'withdrawn' } }).select('name regNo mentor').sort({ regNo: 1 }).lean()
+  const students = await Student.find({ ...scope, status: { $nin: ['withdrawn', 'dropped'] } }).select('name regNo mentor').sort({ regNo: 1 }).lean()
   const ids = students.map(s => s._id)
   const evalFilter = me.scope === 'all' ? {} : { student: { $in: ids } }
   const [prof, evals, totalEvals, followUps, mentors, lastEval] = await Promise.all([
