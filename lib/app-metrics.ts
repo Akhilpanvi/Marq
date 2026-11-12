@@ -12,6 +12,7 @@ export async function appMetrics(match: Record<string, unknown>) {
   return {
     total: n(s => s !== 'Not Applied'), // "No, I didn't apply" is a drive answer, not an application
     companies,
+    notApplied: n(s => s === 'Not Applied'),
     inProgress: n(s => !CLOSED.includes(s) && s !== 'Not Applied' && s !== 'Offered'),
     written: n(s => s.startsWith('Written Test')),
     technical: n(s => s.startsWith('Technical Interview')),

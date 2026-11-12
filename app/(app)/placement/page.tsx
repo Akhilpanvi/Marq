@@ -7,6 +7,7 @@ import { pct } from '@/lib/format'
 import { Application, Job, Student } from '@/models'
 import { Card, Grid, PageHeader, Stat, Table, Empty } from '@/components/ui'
 import { Bars } from '@/components/charts'
+import { Modal } from '@/components/form'
 import { AppMetricTiles } from '@/components/app-metrics'
 
 export const metadata = { title: 'Placement Analytics' }
@@ -60,6 +61,7 @@ export default async function PlacementPage() {
       </Grid>
       <div className="my-6"><AppMetricTiles m={m} /></div>
       <Card title="Stage counts (current status)"><Bars data={funnel} x="stage" series={[{ key: 'n', label: 'Applications' }]} height={240} /></Card>
+      <DriveResponses match={match} studentFilter={sMatch} />
       <Card title="Applications per month" className="my-6"><Bars data={monthly.map(x => ({ month: x._id, n: x.n }))} x="month" series={[{ key: 'n', label: 'Applications' }]} height={220} /></Card>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Company-wise recruitment" className="lg:col-span-2" pad={false}>
@@ -74,5 +76,56 @@ export default async function PlacementPage() {
         </Card>
       </div>
     </>
+  )
+}
+
+/** Per drive: who applied, who answered "Not applied", and who hasn't responded — each with names. */
+async function DriveResponses({ match, studentFilter }: { match: Record<string, unknown>; studentFilter: Record<string, unknown> }) {
+  const [jobs, students] = await Promise.all([
+    Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ createdAt: 1 }).lean(),
+    Student.find({ ...studentFilter, status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean(),
+  ])
+  const apps = await Application.find({ ...match, job: { $in: jobs.map(j => j._id) } }).select('job student status').lean()
+  const rows = jobs.map(j => {
+    const a = apps.filter(x => String(x.job) === String(j._id))
+    const said = new Map(a.map(x => [String(x.student), x.status]))
+    return {
+      j,
+      applied: students.filter(s => said.has(String(s._id)) && said.get(String(s._id)) !== 'Not Applied'),
+      notApplied: students.filter(s => said.get(String(s._id)) === 'Not Applied'),
+      noResponse: students.filter(s => !said.has(String(s._id))),
+    }
+  })
+  const list = (title: string, tone: string, xs: typeof students) => (
+    <div>
+      <h3 className={`mb-2 font-semibold ${tone}`}>{title} · {xs.length}</h3>
+      <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto text-sm">
+        {xs.map(s => <li key={String(s._id)} className="flex justify-between gap-3 py-1.5"><Link href={`/students/${s._id}`} className="hover:underline">{s.name}</Link><span className="font-mono text-xs text-muted">{s.regNo}</span></li>)}
+        {!xs.length && <li className="py-2 text-muted">None</li>}
+      </ul>
+    </div>
+  )
+  return (
+    <Card title="Drive responses" className="my-6" pad={false}>
+      <Table head={['Drive', 'Applied', 'Not applied', 'No response', '']} empty={<Empty>No drives yet.</Empty>}>
+        {rows.map(r => (
+          <tr key={String(r.j._id)}>
+            <td className="td"><div className="font-medium">{r.j.company?.name}</div><div className="text-xs text-muted">{r.j.role}</div></td>
+            <td className="td tabular-nums text-emerald-600">{r.applied.length}</td>
+            <td className="td tabular-nums">{r.notApplied.length}</td>
+            <td className="td tabular-nums text-amber-600">{r.noResponse.length}</td>
+            <td className="td text-right">
+              <Modal label="View names" title={`${r.j.company?.name} · ${r.j.role}`} className="btn-ghost px-2 py-1 text-xs" wide>
+                <div className="grid gap-6 sm:grid-cols-3">
+                  {list('Applied', 'text-emerald-600', r.applied)}
+                  {list('Not applied', 'text-fg', r.notApplied)}
+                  {list('No response', 'text-amber-600', r.noResponse)}
+                </div>
+              </Modal>
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
   )
 }

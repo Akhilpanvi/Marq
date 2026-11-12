@@ -77,7 +77,7 @@ export default async function Overview() {
           <Grid>
             <Stat label="Students placed" value={placed.length} hint={`of ${active} active students`} icon={Trophy} href="/placement" />
             <Stat label="Offers" value={m.offers} hint={`${m.accepted} accepted`} />
-            <Stat label="Applications" value={m.total} hint={`${m.companies} companies`} href="/applications" />
+            <Stat label="Applications" value={m.total} hint={`${m.companies} companies · ${m.notApplied} “not applied” answers`} href="/placement" />
             <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
               <Modal label="View students →" title={`Drive status · ${answered.length} answered, ${active - answered.length} not yet`} className="text-accent hover:underline" wide>
                 <DriveAnswerLists answered={answered as Types.ObjectId[]} />
