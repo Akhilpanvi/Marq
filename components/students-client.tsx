@@ -81,7 +81,7 @@ export function ImportWizard({ canUpdate }: { canUpdate: boolean }) {
           </div>
           <div className="max-h-[60vh] overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 border-b border-line bg-surface"><tr>{['Row', 'Reg. No', 'Name', 'Email', 'Department', 'Batch', 'Outcome'].map(h => <th key={h} className="th">{h}</th>)}</tr></thead>
+              <thead className="sticky top-0 border-b border-line bg-surface"><tr>{['Row', 'Reg. No', 'Name', 'University email', 'Placement Mail ID', 'Department', 'Batch', 'Outcome'].map(h => <th key={h} className="th">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-line">
                 {result.rows.map(r => (
                   <tr key={r.row}>
@@ -89,6 +89,7 @@ export function ImportWizard({ canUpdate }: { canUpdate: boolean }) {
                     <td className="td font-mono text-xs">{r.data.regNo}</td>
                     <td className="td">{r.data.name}</td>
                     <td className="td text-muted">{r.data.email}</td>
+                    <td className="td">{r.data.personalEmail}</td>
                     <td className="td">{r.data.department}</td>
                     <td className="td">{r.data.batch}</td>
                     <td className="td"><Badge tone={TONE[r.outcome]}>{r.outcome}</Badge>{r.errors.length > 0 && <div className="mt-1 text-xs text-muted">{r.errors.join('; ')}</div>}</td>

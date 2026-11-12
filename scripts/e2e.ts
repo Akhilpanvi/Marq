@@ -763,12 +763,24 @@ try {
     assert.equal(st?.department, 'CSE')
     assert.equal(st?.specialization, 'CSE-H')
     // "Update existing" with only ID + Placement Mail ID changes that field and nothing else
-    const pm = join(tmp, 'placement.csv')
-    writeFileSync(pm, 'Student ID NO,Name (reference only),Placement Mail ID\n2300031111,Someone Else,roster.placement@example.com\n')
+    // an Excel file with a title line above the headings and a footer: real row numbers, placement mail shown in the preview
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('List')
+    ws.addRow(['Top Notch Marquee — placement mail IDs'])
+    ws.addRow(['Student ID NO', 'Name (reference only)', 'Placement Mail ID'])
+    ws.addRow(['2300031111', 'Someone Else', 'roster.placement@example.com'])
+    ws.addRow([])
+    ws.addRow(['', 'Total: 1', ''])
+    const pm = join(tmp, 'placement.xlsx')
+    await wb.xlsx.writeFile(pm)
     await aa.goto('/students/import')
     await aa.setInputFiles('input[type=file]', pm)
     await aa.getByLabel(/Update existing students/).check()
     await aa.getByRole('button', { name: /Validate/ }).click()
+    await aa.getByText('roster.placement@example.com').waitFor() // shown in the preview
+    const row3 = aa.locator('tr', { hasText: '2300031111' })
+    assert.equal((await row3.locator('td').first().innerText()).trim(), '3') // its real sheet row
+    await aa.getByText(/1\s*total/).waitFor()
     await aa.getByRole('button', { name: /Confirm import \(1\)/ }).click()
     await toast(aa, /1 updated/)
     const st2 = await mongoose.connection.collection('students').findOne({ regNo: '2300031111' })

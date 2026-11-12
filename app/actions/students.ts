@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { assertStudentAccess, audit, guard } from '@/lib/auth'
 import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, photoLink, REGNO, str, type State } from '@/lib/form'
-import { normalise, readSheet } from '@/lib/sheet'
+import { normalise, readRawRows } from '@/lib/sheet'
 import { issueLink } from '@/lib/tokens'
 import { hasPerm } from '@/lib/rbac'
 import { Application, Attendance, AssessmentResult, Batch, CodingStat, Evaluation, Notification, Role, ScoreSnapshot, Student, User } from '@/models'
@@ -148,9 +148,26 @@ function importAliases(raw: Record<string, string>[]) {
 /** University email defaults to <regno>@kluniversity.in when the sheet has no email column/value. */
 const UNI_DOMAIN = 'kluniversity.in'
 
+const canon = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, '')
+const REG_HEADS = new Set(['regNo', ...ALIASES.regNo].map(canon))
+
+/** Rows keyed by heading, with their real sheet row numbers. The heading row is found (a title line above it is fine). */
+async function readImport(file: FormDataEntryValue | null) {
+  const grid = await readRawRows(file)
+  const h = grid.slice(0, 15).findIndex(r => r.some(c => REG_HEADS.has(canon(c ?? ''))))
+  if (h < 0) throw new Invalid('Couldn’t find the “Registration Number” (or “Student ID NO”) column heading in the first 15 rows.')
+  const head = grid[h].map(c => (c ?? '').trim())
+  return grid.slice(h + 1)
+    .map((r, i) => ({ sheetRow: h + 2 + i, rec: Object.fromEntries(head.flatMap((c, j) => (c ? [[c, String(r[j] ?? '').trim()]] : []))) as Record<string, string> }))
+    .filter(x => Object.values(x.rec).some(Boolean))
+}
+
 async function validateImport(fd: FormData) {
-  const raw = await readSheet(fd.get('file'))
-  const rows = normalise(raw, importAliases(raw)).filter(r => Object.values(r).some(Boolean))
+  const all = await readImport(fd.get('file'))
+  const norm = normalise(all.map(x => x.rec), importAliases(all.map(x => x.rec)))
+  // ignore lines with no ID, name or email (titles, "Total: 122" footers…) so they don't count as rows
+  const keep = norm.map((r, i) => (r.regNo || r.name || r.email ? i : -1)).filter(i => i >= 0)
+  const read = keep.map(i => all[i]), rows = keep.map(i => norm[i])
   const defaulted = new Set<Record<string, string>>()
   for (const r of rows) if (!r.email && r.regNo && REGNO.test(r.regNo)) { r.email = `${r.regNo.toLowerCase()}@${UNI_DOMAIN}`; defaulted.add(r) }
   if (!rows.length) throw new Invalid('The file has no data rows.')
@@ -184,7 +201,7 @@ async function validateImport(fd: FormData) {
     const status = (d.status || 'active').toLowerCase().replace(/\s+/g, '_')
     if (!(STATUSES as readonly string[]).includes(status)) errors.push(`Status must be one of ${STATUSES.join(', ')}`)
 
-    const row = i + 2
+    const row = read[i].sheetRow
     if (errors.length) return { row, data: d, outcome: 'error', errors }
     if (seenReg.has(regNo)) return { row, data: d, outcome: 'duplicate', errors: ['Duplicate registration number in this file'] }
     if (seenEmail.has(email)) return { row, data: d, outcome: 'duplicate', errors: ['Duplicate email in this file'] }
