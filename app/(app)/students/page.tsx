@@ -25,6 +25,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (mentor) filter.mentor = mentor === 'none' ? null : mentor
   if (status) filter.status = status
   if (dept) filter.department = dept
+  if (sp(params, 'pm') === 'missing') filter.$or = [{ personalEmail: null }, { personalEmail: '' }]
 
   const [students, total, batches, mentors, departments] = await Promise.all([
     Student.find(filter).sort({ regNo: 1 }).skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean(),
@@ -45,6 +46,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const byStatus = new Map((await User.aggregate<{ _id: string; n: number }>([{ $match: { student: { $in: allIds } } }, { $group: { _id: '$status', n: { $sum: 1 } } }])).map(r => [r._id, r.n]))
   const nActive = byStatus.get('active') ?? 0, nInvited = byStatus.get('invited') ?? 0
   const nNone = allIds.length - nActive - nInvited - (byStatus.get('inactive') ?? 0)
+  const noPm = await Student.countDocuments({ _id: { $in: allIds }, $or: [{ personalEmail: null }, { personalEmail: '' }] })
   const bName = new Map(batchNames.map(b => [String(b._id), b.name]))
   const mName = new Map(mentors)
   const canEdit = can(me, 'students.edit'), canAccounts = can(me, 'users.create')
@@ -65,6 +67,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300">Active <b className="tabular-nums">{nActive}</b></span>
         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">Invited <b className="tabular-nums">{nInvited}</b></span>
         <span className="rounded-full border border-line bg-subtle px-3 py-1 text-muted">Not registered <b className="tabular-nums text-fg">{nNone}</b></span>
+        <Link href={sp(params, 'pm') === 'missing' ? '/students' : '/students?pm=missing'} className={`rounded-full border px-3 py-1 ${noPm ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
+          No placement mail ID <b className="tabular-nums">{noPm}</b> {sp(params, 'pm') === 'missing' ? '· show all' : noPm ? '· show' : ''}
+        </Link>
       </div>
       <Card pad={false}>
         <Filters params={params} placeholder="Search name, registration no or email">
