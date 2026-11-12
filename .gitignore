@@ -9,3 +9,4 @@ graphify-out/cache
 .vercel
 graphify-out/manifest.json
 graphify-out/.graphify_*
+data/

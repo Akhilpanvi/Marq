@@ -8,13 +8,14 @@ export const sha256 = (v: string) => createHash('sha256').update(v).digest('hex'
 const TTL = { activate: 7 * 86400_000, reset: 30 * 60_000 }
 
 /** Issues a one-time link (only its hash is stored) and emails it when SMTP is configured. Returns the link when it was not emailed. */
-export async function issueLink(user: { _id: Types.ObjectId; name: string; email: string }, purpose: 'activate' | 'reset') {
+/** `to` overrides the address (e.g. the student's placement mail ID on record); the account email stays the same. */
+export async function issueLink(user: { _id: Types.ObjectId; name: string; email: string }, purpose: 'activate' | 'reset', to?: string) {
   const token = randomBytes(32).toString('base64url')
   await User.updateOne(
     { _id: user._id },
     { $set: { tokenHash: sha256(token), tokenPurpose: purpose, tokenExpires: new Date(Date.now() + TTL[purpose]), ...(purpose === 'activate' ? { invitedAt: new Date() } : {}) } },
   )
   const url = `${appUrl()}/activate?token=${token}`
-  const sent = await sendMail({ to: user.email, ...linkEmail(purpose, user.name, url) }).catch(e => (console.error('mail failed', e), false))
+  const sent = await sendMail({ to: to ?? user.email, ...linkEmail(purpose, user.name, url) }).catch(e => (console.error('mail failed', e), false))
   return sent ? null : url
 }

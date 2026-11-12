@@ -9,7 +9,7 @@ export default function RegisterPage() {
   return (
     <AuthShell>
       <h1 className="font-display text-2xl font-semibold tracking-tight">Student registration</h1>
-      <p className="mt-1.5 text-sm text-muted">For Top Notch Marquee students only. Use the university email the programme office has on record.</p>
+      <p className="mt-1.5 text-sm text-muted">For Top Notch Marquee students only. Use your university email or placement mail ID — whichever the programme office has on record. You choose which one receives the link.</p>
       <RegisterSteps />
       <p className="mt-6 text-xs text-muted">Already registered? <Link href="/login" className="font-medium text-accent hover:underline">Sign in</Link></p>
     </AuthShell>

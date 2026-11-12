@@ -151,7 +151,8 @@ const UNI_DOMAIN = 'kluniversity.in'
 async function validateImport(fd: FormData) {
   const raw = await readSheet(fd.get('file'))
   const rows = normalise(raw, importAliases(raw)).filter(r => Object.values(r).some(Boolean))
-  for (const r of rows) if (!r.email && r.regNo && REGNO.test(r.regNo)) r.email = `${r.regNo.toLowerCase()}@${UNI_DOMAIN}`
+  const defaulted = new Set<Record<string, string>>()
+  for (const r of rows) if (!r.email && r.regNo && REGNO.test(r.regNo)) { r.email = `${r.regNo.toLowerCase()}@${UNI_DOMAIN}`; defaulted.add(r) }
   if (!rows.length) throw new Invalid('The file has no data rows.')
   const allowUpdate = fd.get('update') === 'on'
   const [batches, mentors, existing] = await Promise.all([
@@ -168,9 +169,10 @@ async function validateImport(fd: FormData) {
   const out: (ImportRow & { set?: Record<string, unknown> })[] = rows.map((d, i) => {
     const errors: string[] = []
     const regNo = (d.regNo ?? '').toUpperCase(), email = (d.email ?? '').toLowerCase()
+    const current = byReg.get(regNo)
     if (!regNo) errors.push('Registration number is missing')
     else if (!REGNO.test(regNo)) errors.push('Registration number has invalid characters')
-    if (!d.name) errors.push('Name is missing')
+    if (!d.name && !(current && allowUpdate)) errors.push('Name is missing')
     if (!email) errors.push('University email is missing')
     else if (!EMAIL.test(email)) errors.push('University email is invalid')
     if (d.personalEmail && !EMAIL.test(d.personalEmail)) errors.push('Placement mail ID is invalid')
@@ -188,7 +190,6 @@ async function validateImport(fd: FormData) {
     if (seenEmail.has(email)) return { row, data: d, outcome: 'duplicate', errors: ['Duplicate email in this file'] }
     seenReg.add(regNo)
     seenEmail.add(email)
-    const current = byReg.get(regNo)
     const emailOwner = byEmail.get(email)
     if (emailOwner && emailOwner.regNo !== regNo) return { row, data: d, outcome: 'duplicate', errors: [`Email already belongs to ${emailOwner.regNo}`] }
     const set = {
@@ -196,7 +197,17 @@ async function validateImport(fd: FormData) {
       specialization: d.specialization, year: d.year, section: d.section, status,
       ...(batch ? { batch } : {}), ...(mentor ? { mentor } : {}),
     }
-    if (current) return allowUpdate ? { row, data: d, outcome: 'update', errors: [], set } : { row, data: d, outcome: 'skip', errors: ['Already exists (updates not enabled)'] }
+    if (current) {
+      if (!allowUpdate) return { row, data: d, outcome: 'skip', errors: ['Already exists (updates not enabled)'] }
+      // updates change only the columns the file actually fills in — e.g. a file of ID + Placement Mail ID touches nothing else
+      const has = (k: string) => !!d[k]
+      const upd = Object.fromEntries(Object.entries({
+        name: has('name') && d.name, email: !defaulted.has(d) && email, personalEmail: has('personalEmail') && d.personalEmail.toLowerCase(), phone: has('phone') && d.phone,
+        department: has('department') && d.department, specialization: has('specialization') && d.specialization, year: has('year') && d.year, section: has('section') && d.section,
+        status: has('status') && status, batch, mentor,
+      }).filter(([, v]) => v)) as Record<string, unknown>
+      return { row, data: d, outcome: 'update', errors: [], set: { regNo, ...upd } }
+    }
     return { row, data: d, outcome: 'create', errors: [], set }
   })
   return out

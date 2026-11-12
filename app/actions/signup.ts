@@ -15,10 +15,10 @@ const mask = (email: string) => email.replace(/^(.{2})[^@]*(@.*)$/, (_, a, b) =>
 async function eligible(fd: FormData) {
   await db()
   const email = str(fd, 'email', 120).toLowerCase()
-  if (!EMAIL.test(email)) throw new Invalid('Enter your university email address.')
+  if (!EMAIL.test(email)) throw new Invalid('Enter your university email or placement mail ID.')
   if (!(await rateLimit(`register:${(await clientIp()) ?? 'unknown'}`, 20, 600))) throw new Invalid('Too many attempts from this network. Try again in 10 minutes.')
-  const s = await Student.findOne({ email, status: 'active' }).select('name regNo email department specialization').lean()
-  if (!s) throw new Invalid('This email is not on the Top Notch Marquee list. Use your university email, or contact the programme office.')
+  const s = await Student.findOne({ $or: [{ email }, { personalEmail: email }], status: 'active' }).select('name regNo email personalEmail department specialization').lean()
+  if (!s) throw new Invalid('This email is not on the Top Notch Marquee list. Use your university email or placement mail ID, or contact the programme office.')
   const user = await User.findOne({ student: s._id }).select('status').lean()
   if (user?.status === 'active') throw new Invalid('You have already registered. Sign in, or use “Forgot your password?”.')
   if (user?.status === 'inactive') throw new Invalid('Your account is deactivated. Contact the programme office.')
@@ -29,7 +29,7 @@ async function eligible(fd: FormData) {
 export async function checkRegistration(_: State, fd: FormData): Promise<State> {
   return attempt(async () => {
     const { s } = await eligible(fd)
-    return { ok: 'Found you on the Top Notch list.', data: { name: s.name, regNo: s.regNo, department: s.department ?? '', specialization: s.specialization ?? '', email: mask(s.email) } }
+    return { ok: 'Found you on the Top Notch list.', data: { name: s.name, regNo: s.regNo, department: s.department ?? '', specialization: s.specialization ?? '', email: mask(s.email), placement: s.personalEmail ? mask(s.personalEmail) : null } }
   })
 }
 
@@ -41,14 +41,18 @@ export async function registerStudent(_: State, fd: FormData): Promise<State> {
     const role = await Role.findOne({ key: 'student' }).select('_id').lean()
     if (!role) throw new Invalid('Registration is not available yet. Contact the programme office.')
     const u = user ? await User.findById(user._id).select('name email').lean() : await User.create({ name: s.name, email: s.email, type: 'student', role: role._id, student: s._id, status: 'invited' })
-    const notEmailed = await issueLink(u!, 'activate')
-    await audit({ _id: u!._id, name: s.name }, 'users', 'account.selfRegister', s.regNo, undefined, { emailed: !notEmailed })
+    // the link goes only to an address already on record — university email or placement mail ID — never one typed in
+    const toPlacement = fd.get('sendTo') === 'placement'
+    if (toPlacement && !s.personalEmail) throw new Invalid('No placement mail ID is on record for you. Use your university email.')
+    const to = toPlacement ? s.personalEmail! : s.email
+    const notEmailed = await issueLink(u!, 'activate', to)
+    await audit({ _id: u!._id, name: s.name }, 'users', 'account.selfRegister', s.regNo, undefined, { emailed: !notEmailed, sentTo: toPlacement ? 'placement' : 'university' })
     if (notEmailed) {
       // test/dev only: production must prove ownership of the inbox
       if (process.env.REGISTRATION_SHOW_LINK === 'true') return { ok: 'Registered (test mode: link shown).', secret: notEmailed }
       throw new Invalid('We couldn’t send the email right now. Please try again later or contact the programme office.')
     }
-    return { ok: `Check ${mask(s.email)} — we’ve emailed you a link to set your password. It expires in 7 days.` }
+    return { ok: `Check ${mask(to)} — we’ve emailed you a link to set your password. It expires in 7 days.` }
   })
 }
 

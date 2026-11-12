@@ -5,7 +5,7 @@ Live at **https://marq.klef.me/register**. Screenshots are in [`docs/registratio
 
 ## In one line
 
-A Top Notch student enters their university email → MARQ confirms they are on the list and shows their details → they click **Register** → an email arrives → they set a password → they add their coding profiles → they complete their profile → their MARQ dashboard opens.
+A Top Notch student enters their university email or placement mail ID → MARQ confirms they are on the list and shows their details → they click **Register** → an email arrives → they set a password → they add their coding profiles → they complete their profile → their MARQ dashboard opens.
 
 ## Before students can register (programme office)
 
@@ -18,8 +18,8 @@ A Top Notch student enters their university email → MARQ confirms they are on 
 | # | Screen | What the student does | What MARQ checks |
 |---|---|---|---|
 | 1 | Sign-in page → **Register with your university email** ([01](registration/01-login.png)) | Opens registration | — |
-| 2 | **Student registration** ([02](registration/02-register-email.png)) | Types their university email, clicks **Continue** | Email is on the Top Notch list and active ([03](registration/03-not-on-list.png) shows a refusal) |
-| 3 | **Is this you?** ([04](registration/04-confirm-details.png)) | Checks name, student ID, branch and the masked email; clicks **Register** (or **Not me**) | Not already registered; not deactivated |
+| 2 | **Student registration** ([02](registration/02-register-email.png)) | Types their university email **or placement mail ID**, clicks **Continue** | Email is on the Top Notch list and active ([03](registration/03-not-on-list.png) shows a refusal) |
+| 3 | **Is this you?** ([04](registration/04-confirm-details.png)) | Checks name, student ID, branch; chooses **Send the registration link to** — university email or placement mail ID (both masked, only addresses on record); clicks **Register** (or **Not me**) | Not already registered; not deactivated; the link never goes to an address typed in |
 | 4 | **Check your email** ([05](registration/05-email-sent.png)) | Opens the email from *MARQ · KL University* and clicks **Activate account** | One-time link, valid 7 days; only a hash is stored |
 | 5 | **Set your password** ([06](registration/06-set-password.png)) | Chooses a password (10+ characters) | Link unused and unexpired; signs them in |
 | 6 | **Coding profiles** — step 2 of 3 ([07](registration/07-coding-profiles.png)) | Enters LeetCode, CodeChef and GitHub usernames (Codeforces optional), clicks **Verify & continue** | Each account must exist — checked live; wrong usernames are named in the error |

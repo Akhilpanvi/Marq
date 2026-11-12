@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react'
 import { CheckCircle2, MailCheck } from 'lucide-react'
 import { checkRegistration, registerStudent } from '@/app/actions/signup'
 
-type Found = { name: string; regNo: string; department: string; specialization: string; email: string }
+type Found = { name: string; regNo: string; department: string; specialization: string; email: string; placement: string | null }
 
 /** 1 email → 2 confirm details → 3 email sent. */
 export function RegisterSteps() {
@@ -11,8 +11,9 @@ export function RegisterSteps() {
   const [found, setFound] = useState<Found | null>(null)
   const [done, setDone] = useState<{ ok: string; secret?: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [sendTo, setSendTo] = useState<'university' | 'placement'>('university')
   const [pending, start] = useTransition()
-  const fd = () => { const f = new FormData(); f.set('email', email); return f }
+  const fd = () => { const f = new FormData(); f.set('email', email); f.set('sendTo', sendTo); return f }
 
   if (done)
     return (
@@ -28,7 +29,7 @@ export function RegisterSteps() {
     <div className="mt-8 space-y-4">
       {!found ? (
         <form className="space-y-4" onSubmit={e => { e.preventDefault(); setError(null); start(async () => { const r = await checkRegistration(null, fd()); r?.error ? setError(r.error) : setFound(r!.data as Found) }) }}>
-          <label className="block"><span className="label">University email</span>
+          <label className="block"><span className="label">University email or placement mail ID</span>
             <input type="email" required autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="2300030001@kluniversity.in" className="input" autoComplete="email" />
           </label>
           <button className="btn-primary w-full py-2.5" disabled={pending}>{pending ? 'Checking…' : 'Continue'}</button>
@@ -44,8 +45,17 @@ export function RegisterSteps() {
               <dt className="text-muted">Email</dt><dd>{found.email}</dd>
             </dl>
           </div>
+          <fieldset className="rounded-xl border border-line bg-surface p-4 text-sm">
+            <legend className="px-1 font-medium">Send the registration link to</legend>
+            {[['university', 'University email', found.email], ['placement', 'Placement mail ID', found.placement]].map(([v, l, addr]) => (
+              <label key={v} className={`mt-1 flex items-center gap-2 rounded-lg p-2 ${addr ? 'cursor-pointer hover:bg-subtle' : 'opacity-50'}`}>
+                <input type="radio" name="sendTo" value={v!} checked={sendTo === v} disabled={!addr} onChange={() => setSendTo(v as 'university' | 'placement')} className="size-4 accent-brand-600" />
+                <span>{l} <span className="text-muted">— {addr ?? 'not on record'}</span></span>
+              </label>
+            ))}
+          </fieldset>
           <div className="flex gap-2">
-            <button type="button" className="btn-outline" onClick={() => { setFound(null); setError(null) }}>Not me</button>
+            <button type="button" className="btn-outline" onClick={() => { setFound(null); setError(null); setSendTo('university') }}>Not me</button>
             <button type="button" className="btn-primary flex-1" disabled={pending} onClick={() => { setError(null); start(async () => { const r = await registerStudent(null, fd()); r?.error ? setError(r.error) : setDone({ ok: r!.ok!, secret: r!.secret }) }) }}>{pending ? 'Sending…' : 'Register'}</button>
           </div>
         </div>
