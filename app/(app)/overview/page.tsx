@@ -11,6 +11,8 @@ import { Bars } from '@/components/charts'
 import { AttendanceDays } from '@/components/attendance-days'
 import { OFFERED } from '@/lib/placement'
 import { MarqWordmark } from '@/components/logo'
+import { Modal } from '@/components/form'
+import type { Types } from 'mongoose'
 
 export const metadata = { title: 'Overview' }
 const fmt0 = (v: number | null | undefined) => (v == null ? '—' : Math.round(v).toLocaleString('en-IN'))
@@ -76,7 +78,11 @@ export default async function Overview() {
             <Stat label="Students placed" value={placed.length} hint={`of ${active} active students`} icon={Trophy} href="/placement" />
             <Stat label="Offers" value={m.offers} hint={`${m.accepted} accepted`} />
             <Stat label="Applications" value={m.total} hint={`${m.companies} companies`} href="/applications" />
-            <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint="students who updated at least one drive" />
+            <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
+              <Modal label="View students →" title={`Drive status · ${answered.length} answered, ${active - answered.length} not yet`} className="text-accent hover:underline" wide>
+                <DriveAnswerLists answered={answered as Types.ObjectId[]} />
+              </Modal>
+            } />
           </Grid>
           <Card title="Placement progress" className="mt-4">
             <Bars data={[{ s: 'Applied', n: m.total }, { s: 'Online test', n: m.written }, { s: 'Technical round', n: m.technical }, { s: 'HR round', n: m.hr }, { s: 'Offers', n: m.offers }, { s: 'Accepted', n: m.accepted }]} x="s" series={[{ key: 'n', label: 'Applications' }]} height={200} />
@@ -188,5 +194,24 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
       </div>
       <div className="mt-4 flex flex-wrap gap-2"><Link href="/attendance/register" className="btn-primary"><CalendarClock className="size-4" />Post today&apos;s attendance</Link><Link href="/students/import" className="btn-outline"><Upload className="size-4" />Bulk import students</Link><Link href="/users" className="btn-outline"><UserPlus className="size-4" />Manage accounts</Link></div>
     </Card>
+  )
+}
+
+/** Who has updated at least one drive, and who hasn't (active students only). */
+async function DriveAnswerLists({ answered }: { answered: Types.ObjectId[] }) {
+  const all = await Student.find({ status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean()
+  const done = new Set(answered.map(String))
+  const yes = all.filter(s => done.has(String(s._id))), no = all.filter(s => !done.has(String(s._id)))
+  const list = (xs: typeof all) => (
+    <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto text-sm">
+      {xs.map(s => <li key={String(s._id)} className="flex justify-between gap-3 py-1.5"><Link href={`/students/${s._id}`} className="hover:underline">{s.name}</Link><span className="font-mono text-xs text-muted">{s.regNo}</span></li>)}
+      {!xs.length && <li className="py-2 text-muted">None</li>}
+    </ul>
+  )
+  return (
+    <div className="grid gap-6 sm:grid-cols-2">
+      <div><h3 className="mb-2 font-semibold text-emerald-600">Answered · {yes.length}</h3>{list(yes)}</div>
+      <div><h3 className="mb-2 font-semibold text-amber-600">Not yet · {no.length}</h3>{list(no)}</div>
+    </div>
   )
 }

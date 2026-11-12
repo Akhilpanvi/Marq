@@ -10,7 +10,7 @@ export async function appMetrics(match: Record<string, unknown>) {
   ])
   const n = (pred: (s: string) => boolean) => byStatus.filter(r => pred(r._id)).reduce((t, r) => t + r.n, 0)
   return {
-    total: n(() => true),
+    total: n(s => s !== 'Not Applied'), // "No, I didn't apply" is a drive answer, not an application
     companies,
     inProgress: n(s => !CLOSED.includes(s) && s !== 'Not Applied' && s !== 'Offered'),
     written: n(s => s.startsWith('Written Test')),

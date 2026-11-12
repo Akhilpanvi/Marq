@@ -16,24 +16,25 @@ export default async function PlacementPage() {
   const ids = await scopedStudentIds(me)
   const match: Record<string, unknown> = ids ? { student: { $in: ids } } : {}
   const sMatch = ids ? { _id: { $in: ids } } : {}
+  const applied = { ...match, status: { $ne: 'Not Applied' } } // "No, I didn't apply" answers are not applications
   const [m, students, placed, offered, byCompany, monthly, packages, topStudents] = await Promise.all([
     appMetrics(match),
     Student.countDocuments({ ...sMatch, status: { $ne: 'withdrawn' } }),
     Application.distinct('student', { ...match, status: 'Accepted' }),
     Application.distinct('student', { ...match, status: { $in: OFFERED } }),
     Application.aggregate<{ _id: string; apps: number; offers: number; accepted: number; rejected: number; inProcess: number }>([
-      { $match: match },
+      { $match: applied },
       { $group: { _id: '$company', apps: { $sum: 1 }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } }, accepted: { $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] } }, rejected: { $sum: { $cond: [{ $in: ['$status', REJECTED] }, 1, 0] } } } },
       { $sort: { apps: -1 } }, { $limit: 30 },
     ]),
-    Application.aggregate<{ _id: string; n: number }>([{ $match: match }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: { $ifNull: ['$appliedOn', '$createdAt'] }, timezone: 'Asia/Kolkata' } }, n: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
+    Application.aggregate<{ _id: string; n: number }>([{ $match: applied }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: { $ifNull: ['$appliedOn', '$createdAt'] }, timezone: 'Asia/Kolkata' } }, n: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
     Application.aggregate<{ _id: null; max: number; avg: number; n: number }>([
       { $match: { ...match, status: 'Accepted', job: { $ne: null } } },
       { $lookup: { from: 'jobs', localField: 'job', foreignField: '_id', as: 'j' } }, { $unwind: '$j' }, { $match: { 'j.ctc': { $gt: 0 } } },
       { $group: { _id: null, max: { $max: '$j.ctc' }, avg: { $avg: '$j.ctc' }, n: { $sum: 1 } } },
     ]),
     Application.aggregate<{ _id: unknown; apps: number; offers: number }>([
-      { $match: match }, { $group: { _id: '$student', apps: { $sum: 1 }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } } } }, { $sort: { offers: -1, apps: -1 } }, { $limit: 10 },
+      { $match: applied }, { $group: { _id: '$student', apps: { $sum: 1 }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } } } }, { $sort: { offers: -1, apps: -1 } }, { $limit: 10 },
     ]),
   ])
   const names = new Map((await Student.find({ _id: { $in: topStudents.map(t => t._id as Types.ObjectId) } }).select('name').lean()).map(s => [String(s._id), s.name]))
@@ -67,7 +68,7 @@ export default async function PlacementPage() {
           </Table>
         </Card>
         <Card title="Student-wise" pad={false}>
-          <Table head={['Student', 'Apps', 'Offers']} empty={<Empty>No applications yet.</Empty>}>
+          <Table head={['Student', 'Applied to', 'Offers']} empty={<Empty>No applications yet.</Empty>}>
             {topStudents.map(t => <tr key={String(t._id)}><td className="td"><Link href={`/students/${t._id}`} className="hover:underline">{names.get(String(t._id))}</Link></td><td className="td tabular-nums">{t.apps}</td><td className="td tabular-nums">{t.offers}</td></tr>)}
           </Table>
         </Card>
