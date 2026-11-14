@@ -5,7 +5,7 @@ import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, photoLink, REGNO, str,
 import { normalise, readRawRows } from '@/lib/sheet'
 import { issueLink } from '@/lib/tokens'
 import { hasPerm } from '@/lib/rbac'
-import { Application, Attendance, AssessmentResult, Batch, CodingStat, Evaluation, Notification, Role, ScoreSnapshot, Student, User } from '@/models'
+import { Application, Attendance, AssessmentResult, Batch, CodingStat, Evaluation, Notification, Program, Role, ScoreSnapshot, Student, User } from '@/models'
 
 const STATUSES = ['active', 'on_hold', 'withdrawn', 'completed'] as const
 
@@ -304,5 +304,19 @@ export async function undoDropStudent(_: State, fd: FormData): Promise<State> {
     revalidatePath(`/students/${id}`)
     revalidatePath('/students')
     return { ok: `${s.name} is active again.` }
+  })
+}
+
+/** One click: create batch "A" (and the programme if there is none) and put every active student without a batch into it. */
+export async function setupBatchA(_: State, _fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('students.edit')
+    const program = (await Program.findOne().sort({ createdAt: 1 })) ?? (await Program.create({ name: 'Top Notch Marquee 2026', status: 'running' }))
+    const a = (await Batch.findOne({ name: 'A' })) ?? (await Batch.create({ name: 'A', program: program._id }))
+    const r = await Student.updateMany({ demo: { $ne: true }, status: { $ne: 'dropped' }, $or: [{ batch: null }, { batch: { $exists: false } }] }, { $set: { batch: a._id } })
+    await audit(me, 'students', 'batch.setupA', a._id, undefined, { assigned: r.modifiedCount })
+    revalidatePath('/students')
+    revalidatePath('/attendance/register')
+    return { ok: r.modifiedCount ? `Batch A is ready — ${r.modifiedCount} student${r.modifiedCount === 1 ? '' : 's'} added to it.` : 'Batch A is ready. Every student already has a batch.' }
   })
 }

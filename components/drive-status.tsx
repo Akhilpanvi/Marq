@@ -3,16 +3,16 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, X } from 'lucide-react'
 import { setDriveStatus } from '@/app/actions/placement'
-import { DRIVE_GROUPS, NUDGE_DAYS, OFFERED, daysSince, driveChoice, driveChoicesFor, isWaiting } from '@/lib/placement'
+import { DRIVE_GROUPS, EDIT_MINUTES, NUDGE_DAYS, OFFERED, daysSince, driveChoice, driveChoicesFor, isWaiting } from '@/lib/placement'
 import { toast } from './toast'
 
 type Hist = { to?: string; at?: string; remarks?: string }
-type Props = { job: string; company: string; role: string; status?: string; updatedAt?: string; history?: Hist[] }
+type Props = { job: string; company: string; role: string; status?: string; updatedAt?: string; editUntil?: string; history?: Hist[] }
 
 const ago = (n: number) => (n <= 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`)
 const dm = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '')
 const NEXT: Record<string, string> = {
-  going: 'We’ll remind you in a week to update this if you’re still waiting.',
+  going: 'We’ll remind you in a week if you’re still waiting, so you can tell the Director or the IRP admin about any news.',
   out: 'Thanks for letting us know — keep going with the other drives!',
   offer: 'The placement team will contact you to verify your offer.',
   Accepted: 'Congratulations! The placement team will update your placement record.',
@@ -20,7 +20,7 @@ const NEXT: Record<string, string> = {
   none: 'No problem.',
 }
 
-export function DriveStatus({ job, company, role, status, updatedAt, history = [] }: Props) {
+export function DriveStatus({ job, company, role, status, updatedAt, editUntil: until, history = [] }: Props) {
   const router = useRouter()
   const ref = useRef<HTMLDialogElement>(null)
   const [step, setStep] = useState<'choose' | 'review' | 'done'>('choose')
@@ -30,10 +30,22 @@ export function DriveStatus({ job, company, role, status, updatedAt, history = [
   const [error, setError] = useState('')
   const [result, setResult] = useState('')
   const [pending, start] = useTransition()
+  const [editUntil, setEditUntil] = useState(until)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => setEditUntil(until), [until])
+  // tick while a window is open so the card locks by itself when the time runs out
+  useEffect(() => {
+    if (!editUntil || Date.now() > +new Date(editUntil)) return
+    const t = setInterval(() => setNow(Date.now()), 15_000)
+    return () => clearInterval(t)
+  }, [editUntil])
+  const locked = !!status && !!editUntil && now > +new Date(editUntil)
+  const minsLeft = editUntil && !locked ? Math.max(1, Math.ceil((+new Date(editUntil) - now) / 60_000)) : 0
 
   const cur = driveChoice(status)
   const days = daysSince(updatedAt)
   const nudge = isWaiting(status) && days >= NUDGE_DAYS
+  const LOCK = 'Locked. To change it, contact the Director or the IRP admin.'
   const choices = driveChoicesFor(status)
   const chosen = driveChoice(pick)
   const same = !!pick && pick === status && !note.trim()
@@ -59,6 +71,8 @@ export function DriveStatus({ job, company, role, status, updatedAt, history = [
     const r = await setDriveStatus(null, fd)
     if (r?.error) { setError(r.error); toast(r.error, 'error'); return }
     setResult(r?.ok ?? 'Saved')
+    const eu = (r?.data as { editUntil?: string } | undefined)?.editUntil
+    if (eu) { setEditUntil(eu); setNow(Date.now()) }
     toast(r?.ok ?? 'Saved')
     setStep('done')
   })
@@ -95,12 +109,13 @@ export function DriveStatus({ job, company, role, status, updatedAt, history = [
         ) : (
           <span className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-800 dark:text-amber-300">Not answered yet</span>
         )}
-        {!nudge && <button type="button" data-testid="drive-status-open" onClick={open} className={`${cur ? 'btn-outline' : 'btn-primary'} min-h-11`}>{cur ? 'Update my status' : 'Set my status'}</button>}
+        {!locked && <button type="button" data-testid="drive-status-open" onClick={open} className={`${cur ? 'btn-outline' : 'btn-primary'} min-h-11`}>{cur ? 'Update my status' : 'Set my status'}</button>}
+        {!locked && minsLeft > 0 && <span data-testid="drive-window" className="text-xs text-muted">You can change this for {minsLeft} more minute{minsLeft === 1 ? '' : 's'}.</span>}
       </div>
-      {nudge && (
-        <div data-testid="drive-nudge" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm">
-          <span>Heard anything from <b>{company}</b>? You’ve been waiting {days} days.</span>
-          <button type="button" data-testid="drive-status-open" onClick={open} className="btn-primary min-h-11">Update my status</button>
+      {locked && <p data-testid="drive-locked" className="flex items-start gap-1.5 text-sm text-muted"><span aria-hidden>🔒</span><span>{LOCK}</span></p>}
+      {locked && nudge && (
+        <div data-testid="drive-nudge" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm">
+          Heard anything from <b>{company}</b>? You’ve been waiting {days} days — contact the Director or the IRP admin and they will update it for you.
         </div>
       )}
 
@@ -183,6 +198,7 @@ export function DriveStatus({ job, company, role, status, updatedAt, history = [
                 </div>
               )}
               {isOffer && note.trim() && <p className="text-xs text-muted">Note: “{note.trim()}”</p>}
+              <p className="text-xs text-muted">After you save, you can change this for {EDIT_MINUTES} minutes. Then it is locked — to change it later, contact the Director or the IRP admin.</p>
               {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-2.5 text-sm text-red-700 dark:text-red-300">{error}</p>}
               <div className="flex justify-between gap-2">
                 <button type="button" className="btn-outline min-h-11" disabled={pending} onClick={() => setStep('choose')}>Back</button>
@@ -196,6 +212,7 @@ export function DriveStatus({ job, company, role, status, updatedAt, history = [
               <CheckCircle2 className="mx-auto size-10 text-emerald-500" aria-hidden />
               <p className="text-sm">{result}</p>
               <p className="text-sm text-muted"><b>What happens next:</b> {NEXT[chosen?.group === 'decision' ? chosen.value : (chosen?.group ?? 'none')]}</p>
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-sm">Made a mistake? You can change it for the next <b>{EDIT_MINUTES} minutes</b>. After that it is locked — contact the Director or the IRP admin.</p>
               <button type="button" data-testid="drive-done" className="btn-primary min-h-11" onClick={done}>Done</button>
             </div>
           )}

@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { requireStudent } from '@/lib/auth'
 import { appMetrics } from '@/lib/app-metrics'
 import { getStatuses } from '@/lib/settings'
-import { statusTone } from '@/lib/placement'
+import { driveLocked, LOCK_MESSAGE, statusTone } from '@/lib/placement'
 import { day } from '@/lib/format'
 import { OID } from '@/lib/form'
 import { Application } from '@/models'
@@ -46,9 +46,15 @@ export default async function MyApplications({ searchParams }: { searchParams: P
         <div className="space-y-6 lg:col-span-3">
           {selected ? (
             <>
-              <Card title={`${selected.company} · ${selected.role}`} action={<Modal label="Edit details" title="Edit application" className="btn-ghost py-1 text-xs" wide><ApplicationForm a={selected} statuses={statuses} /></Modal>}>
-                <p className="mb-3 text-sm text-muted">Update the status as you progress. Previous statuses are never overwritten.</p>
-                <StatusForm id={String(selected._id)} current={selected.status} statuses={statuses} />
+              <Card title={`${selected.company} · ${selected.role}`} action={driveLocked(selected) ? null : <Modal label="Edit details" title="Edit application" className="btn-ghost py-1 text-xs" wide><ApplicationForm a={selected} statuses={statuses} /></Modal>}>
+                {driveLocked(selected) ? (
+                  <p className="mb-1 flex items-start gap-1.5 rounded-lg border border-line bg-subtle/50 p-3 text-sm"><span aria-hidden>🔒</span><span><b>{selected.status}</b> — {LOCK_MESSAGE}</span></p>
+                ) : (
+                  <>
+                    <p className="mb-3 text-sm text-muted">Update the status as you progress. Previous statuses are never overwritten.{selected.job ? ' Company drives can be changed for 10 minutes after you save them; then they lock.' : ''}</p>
+                    <StatusForm id={String(selected._id)} current={selected.status} statuses={statuses} />
+                  </>
+                )}
                 {selected.link && <a href={selected.link} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-accent hover:underline">Application link ↗</a>}
               </Card>
               <Card title="Timeline"><AppTimeline history={[...selected.history].reverse()} /></Card>

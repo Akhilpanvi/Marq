@@ -19,7 +19,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   if (type) filter.type = type
   if (/^[a-f0-9]{24}$/.test(company)) filter.company = company
   if (min) filter.ctc = { $gte: min }
-  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ status: -1, deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status updatedAt history').lean(), companyOptions()])
+  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ status: -1, deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status updatedAt editUntil history').lean(), companyOptions()])
   const cos = new Map((await Company.find({ _id: { $in: jobs.map(j => j.company) } }).lean()).map(c => [String(c._id), c]))
   const applied = new Map(mine.filter(a => a.job).map(a => [String(a.job), a]))
   const unanswered = jobs.filter(j => !applied.has(String(j._id))).length
@@ -57,7 +57,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
               {j.eligibility && <p className="mt-1 text-xs text-muted">Eligibility: {j.eligibility}</p>}
               {j.process && <p className="mt-1 text-xs text-muted">Process: {j.process}</p>}
               {j.link && <div className="mt-3"><a href={j.link} target="_blank" rel="noopener noreferrer" className="btn-ghost -ml-2"><ExternalLink className="size-4" />Apply on the company site</a></div>}
-              <DriveStatus job={String(j._id)} company={c?.name ?? ''} role={j.role} status={app?.status} updatedAt={app?.updatedAt ? new Date(app.updatedAt).toISOString() : undefined}
+              <DriveStatus job={String(j._id)} company={c?.name ?? ''} role={j.role} status={app?.status} updatedAt={app?.updatedAt ? new Date(app.updatedAt).toISOString() : undefined} editUntil={app?.editUntil ? new Date(app.editUntil).toISOString() : undefined}
                 history={(app?.history ?? []).map(h => ({ to: h.to ?? undefined, at: h.at ? new Date(h.at).toISOString() : undefined, remarks: h.remarks ?? undefined }))} />
             </Card>
           )

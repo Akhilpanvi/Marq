@@ -48,7 +48,7 @@ export default async function StudentDashboard() {
 
       {pendingDrives > 0 && <Link href="/me/jobs" className="mb-6 block rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{pendingDrives} {pendingDrives === 1 ? 'company needs' : 'companies need'} your status</b> — tell us where you are →</Link>}
       {waiting.length > 0 && (
-        <Card title="Drives to update" icon={Briefcase} pad={false} className="mb-6">
+        <Card title="Drives waiting for news" icon={Briefcase} pad={false} className="mb-6">
           <ul className="divide-y divide-line">
             {waiting.map(a => <li key={String(a._id)}><Link href="/me/jobs" className="flex min-h-11 items-center justify-between gap-2 px-5 py-2.5 text-sm hover:bg-subtle"><span><b>{a.company}</b> <span className="text-muted">· {a.role}</span></span><span className="text-xs text-amber-700 dark:text-amber-300">waiting {daysSince(a.updatedAt)} days</span></Link></li>)}
           </ul>

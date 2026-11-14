@@ -328,7 +328,8 @@ const applicationSchema = new Schema(
     key: { type: String, required: true }, // normalised company|role, blocks duplicates per student
     link: String,
     appliedOn: Date,
-    nudgedAt: Date, // last "any news?" reminder sent to the student
+    nudgedAt: Date,
+    editUntil: Date, // students may change a drive status until this time (10 min after their first save); afterwards only staff can // last "any news?" reminder sent to the student
     source: { type: String, default: 'MARQ' },
     status: { type: String, required: true, index: true },
     remarks: String,

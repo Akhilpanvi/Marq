@@ -78,3 +78,12 @@ export const WAITING_STATUSES = ['Applied', 'Applied - No Response', 'Written Te
 export const NUDGE_DAYS = 7
 export const isWaiting = (status?: string | null) => WAITING_STATUSES.includes(status ?? '')
 export const daysSince = (d?: Date | string | null) => (d ? Math.floor((Date.now() - +new Date(d)) / 86_400_000) : 0)
+
+/* ───────────── Edit window ─────────────
+   After a student saves a drive status they can still change it for EDIT_MINUTES. Then it is locked:
+   only the Director or the IRP admin (staff) can change it, or reopen it for another window. */
+export const EDIT_MINUTES = 10
+export const LOCK_MESSAGE = 'This status is locked. To change it, contact the Director or the IRP admin.'
+/** Drive applications (linked to a published job) lock once their edit window has passed. Older answers with no window yet are still open. */
+export const driveLocked = (a: { job?: unknown; editUntil?: Date | string | null }, now = Date.now()) =>
+  !!a.job && !!a.editUntil && now > +new Date(a.editUntil)

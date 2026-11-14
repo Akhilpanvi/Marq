@@ -368,6 +368,8 @@ try {
   const hist = (app: { history: { to: string }[] } | null) => app!.history.map(h => h.to)
   /** Opens the wizard on the Acme card, picks a plain-language choice and goes to the review screen. */
   async function chooseStatus(title: string | RegExp, note?: string) {
+    // keep the 10-minute edit window open for the many quick steps below (the lock itself has its own step)
+    await mongoose.connection.collection('applications').updateOne({ company: 'Acme Corp', editUntil: { $exists: true } }, { $set: { editUntil: new Date(Date.now() + 5 * 60_000) } }, { timestamps: false } as never)
     await driveCard().getByTestId('drive-status-open').click()
     const d = await dialog(s1).waitFor().then(() => dialog(s1))
     await d.getByText('Where are you with Acme Corp?').waitFor()
@@ -496,11 +498,12 @@ try {
     assert.equal((await fetch(`${BASE}/api/cron/nudges`)).status, 401)
     const apps = mongoose.connection.collection('applications')
     const tenDays = new Date(Date.now() - 10 * 86_400_000)
-    await apps.updateOne({ company: 'Acme Corp' }, { $set: { status: 'Applied - No Response', updatedAt: tenDays }, $unset: { nudgedAt: '' } })
+    // the edit window has ended: the card is locked and the reminder tells the student who to contact
+    await apps.updateOne({ company: 'Acme Corp' }, { $set: { status: 'Applied - No Response', updatedAt: tenDays, editUntil: new Date(Date.now() - 60_000) }, $unset: { nudgedAt: '' } }, { timestamps: false } as never)
     await s1.goto('/me/jobs')
-    await driveCard().getByTestId('drive-nudge').filter({ hasText: 'Heard anything from' }).waitFor()
+    await driveCard().getByTestId('drive-nudge').filter({ hasText: 'Heard anything from' }).filter({ hasText: 'Director or the IRP admin' }).waitFor()
     await s1.goto('/me')
-    await s1.getByText('Drives to update').first().waitFor()
+    await s1.getByText('Drives waiting for news').first().waitFor()
     const r = await (await fetch(`${BASE}/api/cron/nudges`, { headers: { authorization: 'Bearer test-cron' } })).json()
     assert.ok(r.students >= 1, JSON.stringify(r))
     await s1.goto('/notifications')
@@ -508,6 +511,44 @@ try {
     assert.ok((await apps.findOne({ company: 'Acme Corp' }))!.nudgedAt)
     const again = await (await fetch(`${BASE}/api/cron/nudges`, { headers: { authorization: 'Bearer test-cron' } })).json()
     assert.equal(again.students, 0, JSON.stringify(again))
+  })
+
+  await step('Edit window: 10 minutes to change a drive status, then locked; Director / IRP admin can reopen', async () => {
+    const apps = mongoose.connection.collection('applications')
+    const app = (await apps.findOne({ company: 'Acme Corp' }))!
+    // locked: no button, a lock note, My Applications shows no status form
+    await s1.goto('/me/jobs')
+    await driveCard().getByTestId('drive-locked').filter({ hasText: 'Director or the IRP admin' }).waitFor()
+    assert.equal(await driveCard().getByTestId('drive-status-open').count(), 0)
+    await s1.goto(`/me/applications?open=${app._id}`)
+    await s1.getByText(/This status is locked/).waitFor()
+    assert.equal(await s1.getByRole('button', { name: 'Update', exact: true }).count(), 0)
+    // staff see it is locked and reopen it
+    await pa.goto(`/applications/${app._id}`)
+    await pa.getByText('Locked for the student').waitFor()
+    pa.once('dialog', d => d.accept())
+    await pa.getByRole('button', { name: /Reopen for 10 min/ }).click()
+    await toast(pa, /Reopened for 10 minutes/)
+    assert.ok(+(await apps.findOne({ _id: app._id }))!.editUntil > Date.now())
+    await s1.goto('/notifications')
+    await s1.getByText('You can update Acme Corp again').first().waitFor()
+    // a fresh window: the button is back with a countdown
+    await s1.goto('/me/jobs')
+    await driveCard().getByTestId('drive-window').filter({ hasText: 'You can change this for' }).waitFor()
+    // the window ends while the pop-up is open: saving is refused by the server, nothing changes
+    await chooseStatus('I wrote the online test')
+    await apps.updateOne({ _id: app._id }, { $set: { editUntil: new Date(Date.now() - 1000) } }, { timestamps: false } as never)
+    await dialog(s1).getByTestId('drive-save').click()
+    await dialog(s1).getByRole('alert').filter({ hasText: 'locked' }).waitFor()
+    assert.equal((await apps.findOne({ _id: app._id }))!.status, 'Applied - No Response')
+    await dialog(s1).getByLabel('Close').click()
+    // reopened again, a save works and tells the student about the window
+    await apps.updateOne({ _id: app._id }, { $set: { editUntil: new Date(Date.now() + 5 * 60_000) } }, { timestamps: false } as never)
+    await s1.goto('/me/jobs')
+    await chooseStatus('I wrote the online test')
+    await dialog(s1).getByTestId('drive-save').click()
+    await dialog(s1).getByText(/Made a mistake\? You can change it for the next 10 minutes/).waitFor()
+    assert.equal((await apps.findOne({ _id: app._id }))!.status, 'Written Test Completed')
   })
 
   await step('Coding profiles: student links a handle, gets points, rank and appears on both leaderboards', async () => {

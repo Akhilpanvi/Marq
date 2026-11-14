@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   for (const [student, g] of byStudent) {
     const c = g.companies.slice(0, 3)
     const names = c.length > 1 ? `${c.slice(0, -1).join(', ')} and ${c[c.length - 1]}` : c[0]
-    await notifyStudents([student], { title: 'Any news from your drives?', body: `${names} ${c.length > 1 ? 'are' : 'is'} still marked ‘waiting’ — tap to update`, link: '/me/jobs' })
+    await notifyStudents([student], { title: 'Any news from your drives?', body: `${names} ${c.length > 1 ? 'are' : 'is'} still marked ‘waiting’. If you have news, contact the Director or the IRP admin to update it.`, link: '/me/jobs' })
   }
   const ids = [...byStudent.values()].flatMap(g => g.ids)
   if (ids.length) await Application.updateMany({ _id: { $in: ids } }, { $set: { nudgedAt: new Date() } }, { timestamps: false })

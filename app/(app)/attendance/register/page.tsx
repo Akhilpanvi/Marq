@@ -11,6 +11,7 @@ import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { RegisterEditor } from '@/components/register-editor'
 import { RegisterBulk } from '@/components/register-bulk'
 import { decideChange, markExcused, requestChange } from '@/app/actions/register'
+import { setupBatchA } from '@/app/actions/students'
 
 export const metadata = { title: 'Daily Register' }
 const DAY = /^\d{4}-\d{2}-\d{2}$/
@@ -68,7 +69,13 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
               ))}
             </div>
           ) : <Empty>No batches yet. Create one under <Link href="/training" className="text-accent hover:underline">Training</Link> (for example “A”), then assign students to it from Students.</Empty>}
-          {noBatch > 0 && <p className="mt-4 text-sm text-amber-600">{noBatch} active student{noBatch === 1 ? ' has' : 's have'} no batch and can’t be marked. Assign them under <Link href="/students" className="underline">Students</Link> → select → Batch.</p>}
+          {noBatch > 0 && can(me, 'students.edit') && (
+            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+              <p><b>{noBatch} active student{noBatch === 1 ? ' has' : 's have'} no batch</b>, so they can’t be marked yet.</p>
+              <div className="mt-3"><ActionButton action={setupBatchA} fields={{}} className="btn-primary" confirm={`Create batch A and put all ${noBatch} students without a batch into it?`}>Put all {noBatch} students in Batch A</ActionButton></div>
+            </div>
+          )}
+          {noBatch > 0 && !can(me, 'students.edit') && <p className="mt-4 text-sm text-amber-600">{noBatch} active student{noBatch === 1 ? ' has' : 's have'} no batch and can’t be marked. Assign them under <Link href="/students" className="underline">Students</Link> → select → Batch.</p>}
         </Card>
       ) : (
         <>
