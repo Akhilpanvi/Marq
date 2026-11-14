@@ -84,10 +84,27 @@ select.input { @apply pr-8; }
 dialog::backdrop { background: rgb(0 0 0 / 0.45); }
 
 @media print {
+  /* Paper is always light: undo the dark theme's colours (variables) whatever theme the screen was in. */
+  :root, .dark {
+    color-scheme: light;
+    --color-bg: #ffffff; --color-surface: #ffffff; --color-subtle: #f4f4f5; --color-line: #d4d4d8;
+    --color-fg: #18181b; --color-muted: #52525b; --color-accent: #a41c24; --color-accent-soft: #fbf3f3;
+    --marq-m: #b4232c; --marq-a: #e8902a; --marq-r: #3b3fb6; --marq-q: #0f8a7e;
+    --marq-m1: #cc3a43; --marq-m2: #8c1820; --marq-a1: #f1a447; --marq-a2: #bf6c14;
+    --marq-r1: #5357cf; --marq-r2: #2b2f94; --marq-q1: #1aa392; --marq-q2: #0a6b62;
+    --marq-shadow: rgb(26 16 32 / 0.22);
+  }
+  html, body { background: #fff !important; color: #18181b !important; }
   aside, nav, .no-print { display: none !important; }
-  body { background: white; }
   main { max-width: none !important; padding: 0 !important; }
-  .card { box-shadow: none; break-inside: avoid; }
+  .card { box-shadow: none; break-inside: avoid; background: #fff; }
+  .print-flow { break-inside: auto !important; border: 0 !important; padding: 0 !important; background: #fff !important; }
+  .print-flow table { font-size: 10px; }
+  .print-flow td, .print-flow th { padding: 3px 6px; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* Phones: data tables become stacked cards — first cell is the title, the rest are "label … value" lines. */

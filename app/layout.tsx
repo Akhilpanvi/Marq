@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Sora } from 'next/font/google'
 import { Toaster } from '@/components/toast'
-import { themeScript } from '@/components/theme'
+import { PrintLight, themeScript } from '@/components/theme'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
+        <PrintLight />
         {children}
         <Toaster />
       </body>
