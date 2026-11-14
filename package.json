@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
     "test": "tsx scripts/scoring.check.ts",
-    "test:e2e": "tsx scripts/e2e.ts"
+    "test:e2e": "tsx scripts/e2e.ts",
+    "graph": "python3 scripts/graph/build_clean.py && python3 scripts/graph/build_html.py",
+    "test:graph": "node scripts/graph/graph.e2e.mjs"
   },
   "engines": {
     "node": "22.x"

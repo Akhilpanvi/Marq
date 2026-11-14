@@ -1,0 +1,3560 @@
+{
+ "meta": {
+  "nodes": 139,
+  "edges": 303,
+  "source": "graphify-out/graph.json",
+  "generated": "2026-11-14"
+ },
+ "layers": [
+  {
+   "id": "pages",
+   "label": "Pages",
+   "order": 0
+  },
+  {
+   "id": "components",
+   "label": "Components",
+   "order": 1
+  },
+  {
+   "id": "actions",
+   "label": "Actions & API",
+   "order": 2
+  },
+  {
+   "id": "lib",
+   "label": "Libraries",
+   "order": 3
+  },
+  {
+   "id": "data",
+   "label": "Data & Models",
+   "order": 4
+  },
+  {
+   "id": "tooling",
+   "label": "Scripts, Config & Docs",
+   "order": 5
+  }
+ ],
+ "features": [
+  {
+   "id": "students",
+   "label": "Students",
+   "color": "#4E9AF1"
+  },
+  {
+   "id": "attendance",
+   "label": "Attendance & Register",
+   "color": "#F5A623"
+  },
+  {
+   "id": "assessments",
+   "label": "Assessments",
+   "color": "#B07CF0"
+  },
+  {
+   "id": "scoring-performance",
+   "label": "Scoring & Performance",
+   "color": "#E5547E"
+  },
+  {
+   "id": "coding",
+   "label": "Coding & Leaderboard",
+   "color": "#2EC4B6"
+  },
+  {
+   "id": "placement",
+   "label": "Placement & Jobs",
+   "color": "#8BC34A"
+  },
+  {
+   "id": "auth-accounts",
+   "label": "Auth & Accounts",
+   "color": "#D9534F"
+  },
+  {
+   "id": "reports-exports",
+   "label": "Reports & Exports",
+   "color": "#C9A227"
+  },
+  {
+   "id": "admin-settings",
+   "label": "Admin & Settings",
+   "color": "#8D99AE"
+  },
+  {
+   "id": "training-mentors",
+   "label": "Training & Mentors",
+   "color": "#F28E5B"
+  },
+  {
+   "id": "platform",
+   "label": "Platform",
+   "color": "#5B7DB1"
+  },
+  {
+   "id": "tests-tooling",
+   "label": "Tests & Tooling",
+   "color": "#A0522D"
+  },
+  {
+   "id": "shared",
+   "label": "Shared UI & Utils",
+   "color": "#9AA5B1"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "app/(app)/account/page.tsx",
+   "label": "/account",
+   "path": "app/(app)/account/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 6,
+   "summary": "Account page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/announcements/page.tsx",
+   "label": "/announcements",
+   "path": "app/(app)/announcements/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Announcements page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/applications/[id]/page.tsx",
+   "label": "/applications/[id]",
+   "path": "app/(app)/applications/[id]/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 2,
+   "degree": 9,
+   "summary": "Applications page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/applications/page.tsx",
+   "label": "/applications",
+   "path": "app/(app)/applications/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 3,
+   "degree": 12,
+   "summary": "Applications page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/assessments/[id]/page.tsx",
+   "label": "/assessments/[id]",
+   "path": "app/(app)/assessments/[id]/page.tsx",
+   "layer": "pages",
+   "feature": "assessments",
+   "symbols": 2,
+   "degree": 12,
+   "summary": "Assessments page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/assessments/page.tsx",
+   "label": "/assessments",
+   "path": "app/(app)/assessments/page.tsx",
+   "layer": "pages",
+   "feature": "assessments",
+   "symbols": 3,
+   "degree": 12,
+   "summary": "Assessments page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/attendance/page.tsx",
+   "label": "/attendance",
+   "path": "app/(app)/attendance/page.tsx",
+   "layer": "pages",
+   "feature": "attendance",
+   "symbols": 4,
+   "degree": 9,
+   "summary": "Attendance page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/attendance/register/page.tsx",
+   "label": "/attendance/register",
+   "path": "app/(app)/attendance/register/page.tsx",
+   "layer": "pages",
+   "feature": "attendance",
+   "symbols": 4,
+   "degree": 10,
+   "summary": "Attendance/register page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/audit/page.tsx",
+   "label": "/audit",
+   "path": "app/(app)/audit/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 4,
+   "degree": 6,
+   "summary": "Audit page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/companies/page.tsx",
+   "label": "/companies",
+   "path": "app/(app)/companies/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 4,
+   "degree": 7,
+   "summary": "Companies page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/inbox/page.tsx",
+   "label": "/inbox",
+   "path": "app/(app)/inbox/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 3,
+   "degree": 7,
+   "summary": "Inbox page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/jobs/page.tsx",
+   "label": "/jobs",
+   "path": "app/(app)/jobs/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 3,
+   "degree": 10,
+   "summary": "Jobs page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/layout.tsx",
+   "label": "(app)/layout.tsx",
+   "path": "app/(app)/layout.tsx",
+   "layer": "pages",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 9,
+   "summary": "Layout for signed-in pages with sidebar and nav",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/loading.tsx",
+   "label": "/ (loading)",
+   "path": "app/(app)/loading.tsx",
+   "layer": "pages",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 1,
+   "summary": "Loading for this section",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "app/(app)/me/applications/page.tsx",
+   "label": "/me/applications",
+   "path": "app/(app)/me/applications/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 3,
+   "degree": 11,
+   "summary": "Me/applications page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/assessments/page.tsx",
+   "label": "/me/assessments",
+   "path": "app/(app)/me/assessments/page.tsx",
+   "layer": "pages",
+   "feature": "assessments",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "Me/assessments page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/attendance/page.tsx",
+   "label": "/me/attendance",
+   "path": "app/(app)/me/attendance/page.tsx",
+   "layer": "pages",
+   "feature": "attendance",
+   "symbols": 4,
+   "degree": 6,
+   "summary": "Me/attendance page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/coding/page.tsx",
+   "label": "/me/coding",
+   "path": "app/(app)/me/coding/page.tsx",
+   "layer": "pages",
+   "feature": "coding",
+   "symbols": 3,
+   "degree": 10,
+   "summary": "Me/coding page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/contests/page.tsx",
+   "label": "/me/contests",
+   "path": "app/(app)/me/contests/page.tsx",
+   "layer": "pages",
+   "feature": "coding",
+   "symbols": 3,
+   "degree": 7,
+   "summary": "Me/contests page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/jobs/page.tsx",
+   "label": "/me/jobs",
+   "path": "app/(app)/me/jobs/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Me/jobs page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/leaderboard/page.tsx",
+   "label": "/me/leaderboard",
+   "path": "app/(app)/me/leaderboard/page.tsx",
+   "layer": "pages",
+   "feature": "coding",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Me/leaderboard page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/page.tsx",
+   "label": "/me",
+   "path": "app/(app)/me/page.tsx",
+   "layer": "pages",
+   "feature": "students",
+   "symbols": 3,
+   "degree": 12,
+   "summary": "Me page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/performance/page.tsx",
+   "label": "/me/performance",
+   "path": "app/(app)/me/performance/page.tsx",
+   "layer": "pages",
+   "feature": "scoring-performance",
+   "symbols": 3,
+   "degree": 9,
+   "summary": "Me/performance page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/profile/page.tsx",
+   "label": "/me/profile",
+   "path": "app/(app)/me/profile/page.tsx",
+   "layer": "pages",
+   "feature": "students",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Me/profile page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/me/training/page.tsx",
+   "label": "/me/training",
+   "path": "app/(app)/me/training/page.tsx",
+   "layer": "pages",
+   "feature": "training-mentors",
+   "symbols": 3,
+   "degree": 6,
+   "summary": "Me/training page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/mentors/page.tsx",
+   "label": "/mentors",
+   "path": "app/(app)/mentors/page.tsx",
+   "layer": "pages",
+   "feature": "training-mentors",
+   "symbols": 3,
+   "degree": 11,
+   "summary": "Mentors page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/notifications/page.tsx",
+   "label": "/notifications",
+   "path": "app/(app)/notifications/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Notifications page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/overview/page.tsx",
+   "label": "/overview",
+   "path": "app/(app)/overview/page.tsx",
+   "layer": "pages",
+   "feature": "scoring-performance",
+   "symbols": 6,
+   "degree": 10,
+   "summary": "Overview page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/performance/page.tsx",
+   "label": "/performance",
+   "path": "app/(app)/performance/page.tsx",
+   "layer": "pages",
+   "feature": "scoring-performance",
+   "symbols": 5,
+   "degree": 10,
+   "summary": "Performance page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/placement/page.tsx",
+   "label": "/placement",
+   "path": "app/(app)/placement/page.tsx",
+   "layer": "pages",
+   "feature": "placement",
+   "symbols": 3,
+   "degree": 8,
+   "summary": "Placement page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/reports/[kind]/page.tsx",
+   "label": "/reports/[kind]",
+   "path": "app/(app)/reports/[kind]/page.tsx",
+   "layer": "pages",
+   "feature": "reports-exports",
+   "symbols": 2,
+   "degree": 5,
+   "summary": "Reports page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/reports/page.tsx",
+   "label": "/reports",
+   "path": "app/(app)/reports/page.tsx",
+   "layer": "pages",
+   "feature": "reports-exports",
+   "symbols": 3,
+   "degree": 3,
+   "summary": "Reports page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/roles/page.tsx",
+   "label": "/roles",
+   "path": "app/(app)/roles/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 6,
+   "degree": 6,
+   "summary": "Roles page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/settings/page.tsx",
+   "label": "/settings",
+   "path": "app/(app)/settings/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 3,
+   "degree": 10,
+   "summary": "Settings page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/students/[id]/page.tsx",
+   "label": "/students/[id]",
+   "path": "app/(app)/students/[id]/page.tsx",
+   "layer": "pages",
+   "feature": "students",
+   "symbols": 4,
+   "degree": 21,
+   "summary": "Students page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/students/import/page.tsx",
+   "label": "/students/import",
+   "path": "app/(app)/students/import/page.tsx",
+   "layer": "pages",
+   "feature": "students",
+   "symbols": 3,
+   "degree": 3,
+   "summary": "Students/import page",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/students/page.tsx",
+   "label": "/students",
+   "path": "app/(app)/students/page.tsx",
+   "layer": "pages",
+   "feature": "students",
+   "symbols": 3,
+   "degree": 11,
+   "summary": "Students page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/training/page.tsx",
+   "label": "/training",
+   "path": "app/(app)/training/page.tsx",
+   "layer": "pages",
+   "feature": "training-mentors",
+   "symbols": 3,
+   "degree": 11,
+   "summary": "Training page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/training/sessions/[id]/page.tsx",
+   "label": "/training/sessions/[id]",
+   "path": "app/(app)/training/sessions/[id]/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 12,
+   "summary": "Training/sessions page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/(app)/users/page.tsx",
+   "label": "/users",
+   "path": "app/(app)/users/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 5,
+   "degree": 10,
+   "summary": "Users page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts",
+    "lib/form.ts",
+    "lib/format.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/activate/page.tsx",
+   "label": "/activate",
+   "path": "app/activate/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Activate page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "app/change-password/page.tsx",
+   "label": "/change-password",
+   "path": "app/change-password/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Change password page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "app/denied/page.tsx",
+   "label": "/denied",
+   "path": "app/denied/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 2,
+   "degree": 0,
+   "summary": "Denied page",
+   "hubs": []
+  },
+  {
+   "id": "app/feedback/page.tsx",
+   "label": "/feedback",
+   "path": "app/feedback/page.tsx",
+   "layer": "pages",
+   "feature": "admin-settings",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "Feedback page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/forgot-password/page.tsx",
+   "label": "/forgot-password",
+   "path": "app/forgot-password/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Forgot password page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "app/layout.tsx",
+   "label": "layout.tsx",
+   "path": "app/layout.tsx",
+   "layer": "pages",
+   "feature": "platform",
+   "symbols": 6,
+   "degree": 2,
+   "summary": "Root layout for the whole app",
+   "hubs": []
+  },
+  {
+   "id": "app/login/page.tsx",
+   "label": "/login",
+   "path": "app/login/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Login page",
+   "hubs": [
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/not-found.tsx",
+   "label": "/ (not-found)",
+   "path": "app/not-found.tsx",
+   "layer": "pages",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 0,
+   "summary": "Not found for this section",
+   "hubs": []
+  },
+  {
+   "id": "app/onboarding/page.tsx",
+   "label": "/onboarding",
+   "path": "app/onboarding/page.tsx",
+   "layer": "pages",
+   "feature": "auth-accounts",
+   "symbols": 4,
+   "degree": 9,
+   "summary": "Onboarding page",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/page.tsx",
+   "label": "/",
+   "path": "app/page.tsx",
+   "layer": "pages",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 1,
+   "summary": "Landing page",
+   "hubs": [
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/register/page.tsx",
+   "label": "/register",
+   "path": "app/register/page.tsx",
+   "layer": "pages",
+   "feature": "attendance",
+   "symbols": 3,
+   "degree": 2,
+   "summary": "Register page",
+   "hubs": []
+  },
+  {
+   "id": "app/login/form.tsx",
+   "label": "login/form.tsx",
+   "path": "app/login/form.tsx",
+   "layer": "components",
+   "feature": "auth-accounts",
+   "symbols": 2,
+   "degree": 2,
+   "summary": "Form UI component (LoginForm)",
+   "hubs": []
+  },
+  {
+   "id": "app/register/steps.tsx",
+   "label": "register/steps.tsx",
+   "path": "app/register/steps.tsx",
+   "layer": "components",
+   "feature": "attendance",
+   "symbols": 3,
+   "degree": 2,
+   "summary": "Steps UI component (Found, RegisterSteps)",
+   "hubs": []
+  },
+  {
+   "id": "components/app-metrics.tsx",
+   "label": "components/app-metrics.tsx",
+   "path": "components/app-metrics.tsx",
+   "layer": "components",
+   "feature": "scoring-performance",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "App metrics UI component (AppMetricTiles)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/assessment-fields.tsx",
+   "label": "components/assessment-fields.tsx",
+   "path": "components/assessment-fields.tsx",
+   "layer": "components",
+   "feature": "assessments",
+   "symbols": 2,
+   "degree": 5,
+   "summary": "Assessment fields UI component (AssessmentFields)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/auth-shell.tsx",
+   "label": "components/auth-shell.tsx",
+   "path": "components/auth-shell.tsx",
+   "layer": "components",
+   "feature": "auth-accounts",
+   "symbols": 2,
+   "degree": 8,
+   "summary": "Auth shell UI component (AuthShell)",
+   "hubs": []
+  },
+  {
+   "id": "components/charts.tsx",
+   "label": "components/charts.tsx",
+   "path": "components/charts.tsx",
+   "layer": "components",
+   "feature": "scoring-performance",
+   "symbols": 12,
+   "degree": 11,
+   "summary": "Chart components for dashboards",
+   "hubs": []
+  },
+  {
+   "id": "components/client-bits.tsx",
+   "label": "components/client-bits.tsx",
+   "path": "components/client-bits.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 1,
+   "summary": "Client bits UI component (MarkAll)",
+   "hubs": []
+  },
+  {
+   "id": "components/coding-ui.tsx",
+   "label": "components/coding-ui.tsx",
+   "path": "components/coding-ui.tsx",
+   "layer": "components",
+   "feature": "coding",
+   "symbols": 4,
+   "degree": 5,
+   "summary": "Coding ui UI component (Chips, FlagBadge, FLAG)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/delete-student.tsx",
+   "label": "components/delete-student.tsx",
+   "path": "components/delete-student.tsx",
+   "layer": "components",
+   "feature": "students",
+   "symbols": 2,
+   "degree": 3,
+   "summary": "Delete student UI component (DeleteStudent)",
+   "hubs": []
+  },
+  {
+   "id": "components/download.ts",
+   "label": "components/download.ts",
+   "path": "components/download.ts",
+   "layer": "components",
+   "feature": "reports-exports",
+   "symbols": 2,
+   "degree": 1,
+   "summary": "Download UI component (downloadCsv)",
+   "hubs": []
+  },
+  {
+   "id": "components/drive-status.tsx",
+   "label": "components/drive-status.tsx",
+   "path": "components/drive-status.tsx",
+   "layer": "components",
+   "feature": "placement",
+   "symbols": 6,
+   "degree": 3,
+   "summary": "Drive status UI component (Stage, DriveStatus, read)",
+   "hubs": []
+  },
+  {
+   "id": "components/evaluation-fields.tsx",
+   "label": "components/evaluation-fields.tsx",
+   "path": "components/evaluation-fields.tsx",
+   "layer": "components",
+   "feature": "assessments",
+   "symbols": 3,
+   "degree": 3,
+   "summary": "Evaluation fields UI component (EvaluationFields)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/evaluation-list.tsx",
+   "label": "components/evaluation-list.tsx",
+   "path": "components/evaluation-list.tsx",
+   "layer": "components",
+   "feature": "assessments",
+   "symbols": 3,
+   "degree": 7,
+   "summary": "Evaluation list UI component (EvaluationList)",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/format.ts"
+   ]
+  },
+  {
+   "id": "components/form.tsx",
+   "label": "components/form.tsx",
+   "path": "components/form.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 6,
+   "degree": 31,
+   "summary": "Shared form components and submit buttons",
+   "hubs": [
+    "lib/form.ts"
+   ]
+  },
+  {
+   "id": "components/formula.tsx",
+   "label": "components/formula.tsx",
+   "path": "components/formula.tsx",
+   "layer": "components",
+   "feature": "scoring-performance",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "Formula UI component",
+   "hubs": []
+  },
+  {
+   "id": "components/job-fields.tsx",
+   "label": "components/job-fields.tsx",
+   "path": "components/job-fields.tsx",
+   "layer": "components",
+   "feature": "placement",
+   "symbols": 2,
+   "degree": 4,
+   "summary": "Job fields UI component (JobFields)",
+   "hubs": [
+    "components/ui.tsx",
+    "lib/format.ts"
+   ]
+  },
+  {
+   "id": "components/list.tsx",
+   "label": "components/list.tsx",
+   "path": "components/list.tsx",
+   "layer": "components",
+   "feature": "shared",
+   "symbols": 9,
+   "degree": 17,
+   "summary": "List UI component (escapeRe, Filters, pageOf)",
+   "hubs": []
+  },
+  {
+   "id": "components/logo.tsx",
+   "label": "components/logo.tsx",
+   "path": "components/logo.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 10,
+   "degree": 7,
+   "summary": "Logo UI component (Defs, KlLockup, MarqLockup)",
+   "hubs": []
+  },
+  {
+   "id": "components/nav.tsx",
+   "label": "components/nav.tsx",
+   "path": "components/nav.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 6,
+   "degree": 2,
+   "summary": "Top navigation bar",
+   "hubs": []
+  },
+  {
+   "id": "components/placement-ui.tsx",
+   "label": "components/placement-ui.tsx",
+   "path": "components/placement-ui.tsx",
+   "layer": "components",
+   "feature": "placement",
+   "symbols": 7,
+   "degree": 9,
+   "summary": "Placement ui UI component (ApplicationFields, ApplicationForm, AppTimeline)",
+   "hubs": [
+    "components/form.tsx",
+    "components/ui.tsx",
+    "lib/format.ts"
+   ]
+  },
+  {
+   "id": "components/print.tsx",
+   "label": "components/print.tsx",
+   "path": "components/print.tsx",
+   "layer": "components",
+   "feature": "reports-exports",
+   "symbols": 2,
+   "degree": 3,
+   "summary": "Print UI component (PrintButton)",
+   "hubs": []
+  },
+  {
+   "id": "components/rating.tsx",
+   "label": "components/rating.tsx",
+   "path": "components/rating.tsx",
+   "layer": "components",
+   "feature": "assessments",
+   "symbols": 2,
+   "degree": 2,
+   "summary": "Rating UI component",
+   "hubs": []
+  },
+  {
+   "id": "components/register-bulk.tsx",
+   "label": "components/register-bulk.tsx",
+   "path": "components/register-bulk.tsx",
+   "layer": "components",
+   "feature": "attendance",
+   "symbols": 7,
+   "degree": 5,
+   "summary": "Register bulk UI component (Item, RegisterBulk, confirmAll)",
+   "hubs": []
+  },
+  {
+   "id": "components/register-editor.tsx",
+   "label": "components/register-editor.tsx",
+   "path": "components/register-editor.tsx",
+   "layer": "components",
+   "feature": "attendance",
+   "symbols": 5,
+   "degree": 6,
+   "summary": "Editor for the daily attendance register",
+   "hubs": [
+    "lib/format.ts"
+   ]
+  },
+  {
+   "id": "components/score-tiles.tsx",
+   "label": "components/score-tiles.tsx",
+   "path": "components/score-tiles.tsx",
+   "layer": "components",
+   "feature": "scoring-performance",
+   "symbols": 2,
+   "degree": 5,
+   "summary": "Score tiles UI component (ScoreTiles)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/session-fields.tsx",
+   "label": "components/session-fields.tsx",
+   "path": "components/session-fields.tsx",
+   "layer": "components",
+   "feature": "auth-accounts",
+   "symbols": 2,
+   "degree": 4,
+   "summary": "Session fields UI component (SessionFields)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/sidebar.tsx",
+   "label": "components/sidebar.tsx",
+   "path": "components/sidebar.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 2,
+   "degree": 1,
+   "summary": "Sidebar navigation menu",
+   "hubs": []
+  },
+  {
+   "id": "components/student-fields.tsx",
+   "label": "components/student-fields.tsx",
+   "path": "components/student-fields.tsx",
+   "layer": "components",
+   "feature": "students",
+   "symbols": 4,
+   "degree": 5,
+   "summary": "Student fields UI component (StudentFields, STATUS_LABEL)",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/students-client.tsx",
+   "label": "components/students-client.tsx",
+   "path": "components/students-client.tsx",
+   "layer": "components",
+   "feature": "students",
+   "symbols": 6,
+   "degree": 7,
+   "summary": "Students list with filters and actions",
+   "hubs": [
+    "components/ui.tsx"
+   ]
+  },
+  {
+   "id": "components/theme.tsx",
+   "label": "components/theme.tsx",
+   "path": "components/theme.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Theme UI component (ThemeToggle, themeScript)",
+   "hubs": []
+  },
+  {
+   "id": "components/toast.tsx",
+   "label": "components/toast.tsx",
+   "path": "components/toast.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 5,
+   "degree": 7,
+   "summary": "Toast UI component (Toaster, listeners)",
+   "hubs": []
+  },
+  {
+   "id": "components/ui.tsx",
+   "label": "components/ui.tsx",
+   "path": "components/ui.tsx",
+   "layer": "components",
+   "feature": "platform",
+   "symbols": 18,
+   "degree": 58,
+   "summary": "Shared UI building blocks used across pages",
+   "hubs": [
+    "lib/format.ts"
+   ]
+  },
+  {
+   "id": "app/actions/admin.ts",
+   "label": "actions/admin.ts",
+   "path": "app/actions/admin.ts",
+   "layer": "actions",
+   "feature": "admin-settings",
+   "symbols": 6,
+   "degree": 9,
+   "summary": "Server actions for admin (createAnnouncement, deleteAnnouncement, saveScoring)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/assessments.ts",
+   "label": "actions/assessments.ts",
+   "path": "app/actions/assessments.ts",
+   "layer": "actions",
+   "feature": "assessments",
+   "symbols": 9,
+   "degree": 8,
+   "summary": "Server actions for assessments and results",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/auth.ts",
+   "label": "actions/auth.ts",
+   "path": "app/actions/auth.ts",
+   "layer": "actions",
+   "feature": "auth-accounts",
+   "symbols": 10,
+   "degree": 14,
+   "summary": "Server actions for login, logout and password change",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/coding.ts",
+   "label": "actions/coding.ts",
+   "path": "app/actions/coding.ts",
+   "layer": "actions",
+   "feature": "coding",
+   "symbols": 7,
+   "degree": 8,
+   "summary": "Server actions for coding (deleteTarget, saveHandles, saveProfessional)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/feedback.ts",
+   "label": "actions/feedback.ts",
+   "path": "app/actions/feedback.ts",
+   "layer": "actions",
+   "feature": "admin-settings",
+   "symbols": 4,
+   "degree": 7,
+   "summary": "Server actions for feedback (sendFeedback, setFeedbackStatus, CATS)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/me.ts",
+   "label": "actions/me.ts",
+   "path": "app/actions/me.ts",
+   "layer": "actions",
+   "feature": "students",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "Server actions for me (sessionFeedback, updateMyProfile)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/mentorship.ts",
+   "label": "actions/mentorship.ts",
+   "path": "app/actions/mentorship.ts",
+   "layer": "actions",
+   "feature": "training-mentors",
+   "symbols": 5,
+   "degree": 6,
+   "summary": "Server actions for mentorship (allocateMentor, closeFollowUp, rating)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/notifications.ts",
+   "label": "actions/notifications.ts",
+   "path": "app/actions/notifications.ts",
+   "layer": "actions",
+   "feature": "admin-settings",
+   "symbols": 2,
+   "degree": 4,
+   "summary": "Server actions for notifications (markRead)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/placement.ts",
+   "label": "actions/placement.ts",
+   "path": "app/actions/placement.ts",
+   "layer": "actions",
+   "feature": "placement",
+   "symbols": 12,
+   "degree": 10,
+   "summary": "Server actions for companies, jobs and applications",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/register.ts",
+   "label": "actions/register.ts",
+   "path": "app/actions/register.ts",
+   "layer": "actions",
+   "feature": "attendance",
+   "symbols": 8,
+   "degree": 10,
+   "summary": "Server actions for the attendance register",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/roles.ts",
+   "label": "actions/roles.ts",
+   "path": "app/actions/roles.ts",
+   "layer": "actions",
+   "feature": "auth-accounts",
+   "symbols": 3,
+   "degree": 5,
+   "summary": "Server actions for roles (deleteRole, saveRole)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/signup.ts",
+   "label": "actions/signup.ts",
+   "path": "app/actions/signup.ts",
+   "layer": "actions",
+   "feature": "auth-accounts",
+   "symbols": 7,
+   "degree": 10,
+   "summary": "Server actions for student sign-up and activation",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/students.ts",
+   "label": "actions/students.ts",
+   "path": "app/actions/students.ts",
+   "layer": "actions",
+   "feature": "students",
+   "symbols": 14,
+   "degree": 10,
+   "summary": "Server actions to add, edit, import and drop students",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/training.ts",
+   "label": "actions/training.ts",
+   "path": "app/actions/training.ts",
+   "layer": "actions",
+   "feature": "training-mentors",
+   "symbols": 9,
+   "degree": 6,
+   "summary": "Server actions for training (addMaterial, deleteSession, markAttendance)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/actions/users.ts",
+   "label": "actions/users.ts",
+   "path": "app/actions/users.ts",
+   "layer": "actions",
+   "feature": "auth-accounts",
+   "symbols": 5,
+   "degree": 7,
+   "summary": "Server actions for users (assignable, saveUser, sendLink)",
+   "hubs": [
+    "lib/auth.ts",
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/api/attendance/[kind]/route.ts",
+   "label": "api/attendance/[kind]/route.ts",
+   "path": "app/api/attendance/[kind]/route.ts",
+   "layer": "actions",
+   "feature": "attendance",
+   "symbols": 2,
+   "degree": 5,
+   "summary": "API route: attendance",
+   "hubs": [
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "app/api/cron/coding/route.ts",
+   "label": "coding/route.ts",
+   "path": "app/api/cron/coding/route.ts",
+   "layer": "actions",
+   "feature": "coding",
+   "symbols": 3,
+   "degree": 2,
+   "summary": "API route: cron/coding (maxDuration)",
+   "hubs": []
+  },
+  {
+   "id": "app/api/health/route.ts",
+   "label": "health/route.ts",
+   "path": "app/api/health/route.ts",
+   "layer": "actions",
+   "feature": "shared",
+   "symbols": 3,
+   "degree": 1,
+   "summary": "API route: health (dynamic)",
+   "hubs": []
+  },
+  {
+   "id": "app/api/reports/[kind]/route.ts",
+   "label": "api/reports/[kind]/route.ts",
+   "path": "app/api/reports/[kind]/route.ts",
+   "layer": "actions",
+   "feature": "reports-exports",
+   "symbols": 2,
+   "degree": 3,
+   "summary": "API route: reports",
+   "hubs": [
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "app/api/students/template/route.ts",
+   "label": "template/route.ts",
+   "path": "app/api/students/template/route.ts",
+   "layer": "actions",
+   "feature": "reports-exports",
+   "symbols": 4,
+   "degree": 2,
+   "summary": "API route: students/template (COLUMNS, SAMPLE)",
+   "hubs": [
+    "lib/auth.ts"
+   ]
+  },
+  {
+   "id": "proxy.ts",
+   "label": "proxy.ts",
+   "path": "proxy.ts",
+   "layer": "actions",
+   "feature": "auth-accounts",
+   "symbols": 4,
+   "degree": 1,
+   "summary": "Request proxy: route protection and redirects",
+   "hubs": []
+  },
+  {
+   "id": "lib/app-metrics.ts",
+   "label": "lib/app-metrics.ts",
+   "path": "lib/app-metrics.ts",
+   "layer": "lib",
+   "feature": "scoring-performance",
+   "symbols": 2,
+   "degree": 7,
+   "summary": "App metrics helpers (appMetrics)",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/auth.ts",
+   "label": "lib/auth.ts",
+   "path": "lib/auth.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 18,
+   "degree": 68,
+   "summary": "Auth helpers: current user, login checks and access guards",
+   "hubs": [
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/avatar.ts",
+   "label": "lib/avatar.ts",
+   "path": "lib/avatar.ts",
+   "layer": "lib",
+   "feature": "students",
+   "symbols": 4,
+   "degree": 5,
+   "summary": "Avatar helpers (drivePhotoLink, avatarSrc, driveId)",
+   "hubs": []
+  },
+  {
+   "id": "lib/coding-points.ts",
+   "label": "lib/coding-points.ts",
+   "path": "lib/coding-points.ts",
+   "layer": "lib",
+   "feature": "coding",
+   "symbols": 9,
+   "degree": 12,
+   "summary": "Coding points helpers (PlatformKey, TargetFlag, platformPoints)",
+   "hubs": []
+  },
+  {
+   "id": "lib/coding.ts",
+   "label": "lib/coding.ts",
+   "path": "lib/coding.ts",
+   "layer": "lib",
+   "feature": "coding",
+   "symbols": 16,
+   "degree": 7,
+   "summary": "Coding profile sync and stats from external platforms",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/csv.ts",
+   "label": "lib/csv.ts",
+   "path": "lib/csv.ts",
+   "layer": "lib",
+   "feature": "reports-exports",
+   "symbols": 3,
+   "degree": 2,
+   "summary": "CSV parsing and writing helpers",
+   "hubs": []
+  },
+  {
+   "id": "lib/db.ts",
+   "label": "lib/db.ts",
+   "path": "lib/db.ts",
+   "layer": "lib",
+   "feature": "platform",
+   "symbols": 3,
+   "degree": 10,
+   "summary": "MongoDB connection helper",
+   "hubs": []
+  },
+  {
+   "id": "lib/form.ts",
+   "label": "lib/form.ts",
+   "path": "lib/form.ts",
+   "layer": "lib",
+   "feature": "platform",
+   "symbols": 17,
+   "degree": 29,
+   "summary": "Form helpers: Invalid error and attempt wrapper for server actions",
+   "hubs": []
+  },
+  {
+   "id": "lib/format.ts",
+   "label": "lib/format.ts",
+   "path": "lib/format.ts",
+   "layer": "lib",
+   "feature": "platform",
+   "symbols": 8,
+   "degree": 33,
+   "summary": "Format helpers (dayTime, initials, isoDay)",
+   "hubs": []
+  },
+  {
+   "id": "lib/intel.ts",
+   "label": "lib/intel.ts",
+   "path": "lib/intel.ts",
+   "layer": "lib",
+   "feature": "scoring-performance",
+   "symbols": 5,
+   "degree": 10,
+   "summary": "Student intelligence and risk insights",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/journey.ts",
+   "label": "lib/journey.ts",
+   "path": "lib/journey.ts",
+   "layer": "lib",
+   "feature": "scoring-performance",
+   "symbols": 2,
+   "degree": 8,
+   "summary": "Student journey timeline",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/mail.ts",
+   "label": "lib/mail.ts",
+   "path": "lib/mail.ts",
+   "layer": "lib",
+   "feature": "platform",
+   "symbols": 7,
+   "degree": 4,
+   "summary": "Outgoing email sending",
+   "hubs": []
+  },
+  {
+   "id": "lib/notify.ts",
+   "label": "lib/notify.ts",
+   "path": "lib/notify.ts",
+   "layer": "lib",
+   "feature": "admin-settings",
+   "symbols": 4,
+   "degree": 8,
+   "summary": "Creates in-app notifications",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/onboarding.ts",
+   "label": "lib/onboarding.ts",
+   "path": "lib/onboarding.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 4,
+   "degree": 4,
+   "summary": "Onboarding helpers (onboardingState, REQUIRED_HANDLES, REQUIRED_SKILLS)",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/options.ts",
+   "label": "lib/options.ts",
+   "path": "lib/options.ts",
+   "layer": "lib",
+   "feature": "platform",
+   "symbols": 9,
+   "degree": 21,
+   "summary": "Options helpers (batchOptions, companyOptions, mentorOptions)",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/password.ts",
+   "label": "lib/password.ts",
+   "path": "lib/password.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 5,
+   "degree": 2,
+   "summary": "Password hashing and checking",
+   "hubs": []
+  },
+  {
+   "id": "lib/periods.ts",
+   "label": "lib/periods.ts",
+   "path": "lib/periods.ts",
+   "layer": "lib",
+   "feature": "attendance",
+   "symbols": 8,
+   "degree": 8,
+   "summary": "Class periods and timings for attendance",
+   "hubs": []
+  },
+  {
+   "id": "lib/placement.ts",
+   "label": "lib/placement.ts",
+   "path": "lib/placement.ts",
+   "layer": "lib",
+   "feature": "placement",
+   "symbols": 10,
+   "degree": 14,
+   "summary": "Placement drive and application rules",
+   "hubs": []
+  },
+  {
+   "id": "lib/rbac.ts",
+   "label": "lib/rbac.ts",
+   "path": "lib/rbac.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 13,
+   "degree": 11,
+   "summary": "Role-based access control: roles and permissions",
+   "hubs": []
+  },
+  {
+   "id": "lib/register-parse.ts",
+   "label": "lib/register-parse.ts",
+   "path": "lib/register-parse.ts",
+   "layer": "lib",
+   "feature": "attendance",
+   "symbols": 4,
+   "degree": 5,
+   "summary": "Register parse helpers (Parsed, isoDay, parseRegister)",
+   "hubs": []
+  },
+  {
+   "id": "lib/register.ts",
+   "label": "lib/register.ts",
+   "path": "lib/register.ts",
+   "layer": "lib",
+   "feature": "attendance",
+   "symbols": 13,
+   "degree": 5,
+   "summary": "Daily register logic: post, lock and request changes",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/reports.ts",
+   "label": "lib/reports.ts",
+   "path": "lib/reports.ts",
+   "layer": "lib",
+   "feature": "reports-exports",
+   "symbols": 8,
+   "degree": 10,
+   "summary": "Report builders for the reports pages and exports",
+   "hubs": [
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/scope.ts",
+   "label": "lib/scope.ts",
+   "path": "lib/scope.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 2,
+   "degree": 8,
+   "summary": "Limits data to the user's allowed scope",
+   "hubs": [
+    "lib/auth.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/scoring.ts",
+   "label": "lib/scoring.ts",
+   "path": "lib/scoring.ts",
+   "layer": "lib",
+   "feature": "scoring-performance",
+   "symbols": 21,
+   "degree": 15,
+   "summary": "Scoring engine for student performance scores",
+   "hubs": []
+  },
+  {
+   "id": "lib/session.ts",
+   "label": "lib/session.ts",
+   "path": "lib/session.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 14,
+   "degree": 2,
+   "summary": "Session cookie creation, reading and clearing",
+   "hubs": []
+  },
+  {
+   "id": "lib/settings.ts",
+   "label": "lib/settings.ts",
+   "path": "lib/settings.ts",
+   "layer": "lib",
+   "feature": "admin-settings",
+   "symbols": 5,
+   "degree": 14,
+   "summary": "App-wide settings read and write",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "lib/sheet.ts",
+   "label": "lib/sheet.ts",
+   "path": "lib/sheet.ts",
+   "layer": "lib",
+   "feature": "reports-exports",
+   "symbols": 8,
+   "degree": 9,
+   "summary": "Excel sheet reading and writing helpers",
+   "hubs": [
+    "lib/form.ts"
+   ]
+  },
+  {
+   "id": "lib/tokens.ts",
+   "label": "lib/tokens.ts",
+   "path": "lib/tokens.ts",
+   "layer": "lib",
+   "feature": "auth-accounts",
+   "symbols": 4,
+   "degree": 6,
+   "summary": "Signed tokens for activation and password reset",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "models/index.ts",
+   "label": "models/index.ts",
+   "path": "models/index.ts",
+   "layer": "data",
+   "feature": "platform",
+   "symbols": 52,
+   "degree": 68,
+   "summary": "All Mongoose models and schemas for the database",
+   "hubs": []
+  },
+  {
+   "id": "docs/MARQ-How-It-Works.pdf",
+   "label": "docs/MARQ-How-It-Works.pdf",
+   "path": "docs/MARQ-How-It-Works.pdf",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 1,
+   "degree": 0,
+   "summary": "Workflow document explaining how MARQ works",
+   "hubs": []
+  },
+  {
+   "id": "scripts/e2e.ts",
+   "label": "scripts/e2e.ts",
+   "path": "scripts/e2e.ts",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 13,
+   "degree": 0,
+   "summary": "Script: e2e",
+   "hubs": []
+  },
+  {
+   "id": "scripts/import-roster.ts",
+   "label": "scripts/import-roster.ts",
+   "path": "scripts/import-roster.ts",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 4,
+   "degree": 4,
+   "summary": "Script: import roster",
+   "hubs": [
+    "lib/form.ts",
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "scripts/scoring.check.ts",
+   "label": "scripts/scoring.check.ts",
+   "path": "scripts/scoring.check.ts",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 3,
+   "degree": 4,
+   "summary": "Script: scoring.check",
+   "hubs": []
+  },
+  {
+   "id": "scripts/seed-drives.ts",
+   "label": "scripts/seed-drives.ts",
+   "path": "scripts/seed-drives.ts",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 3,
+   "degree": 2,
+   "summary": "Script: seed drives",
+   "hubs": [
+    "models/index.ts"
+   ]
+  },
+  {
+   "id": "scripts/seed.ts",
+   "label": "scripts/seed.ts",
+   "path": "scripts/seed.ts",
+   "layer": "tooling",
+   "feature": "tests-tooling",
+   "symbols": 6,
+   "degree": 4,
+   "summary": "Script: seed",
+   "hubs": [
+    "models/index.ts"
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "source": "app/(app)/account/page.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/announcements/page.tsx",
+   "target": "app/actions/admin.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/announcements/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/announcements/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/[id]/page.tsx",
+   "target": "components/placement-ui.tsx",
+   "weight": 7
+  },
+  {
+   "source": "app/(app)/applications/[id]/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/[id]/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "components/app-metrics.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "components/placement-ui.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "lib/app-metrics.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/applications/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "app/actions/assessments.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "components/assessment-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "components/print.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/assessments/[id]/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "app/actions/assessments.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "components/assessment-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/assessments/page.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/attendance/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/attendance/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/page.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/register/page.tsx",
+   "target": "app/actions/register.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/register/page.tsx",
+   "target": "components/register-bulk.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/register/page.tsx",
+   "target": "components/register-editor.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/attendance/register/page.tsx",
+   "target": "lib/periods.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/attendance/register/page.tsx",
+   "target": "lib/register.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/audit/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/audit/page.tsx",
+   "target": "lib/rbac.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/companies/page.tsx",
+   "target": "app/actions/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/companies/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/inbox/page.tsx",
+   "target": "app/actions/feedback.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/inbox/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 13
+  },
+  {
+   "source": "app/(app)/jobs/page.tsx",
+   "target": "app/actions/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/jobs/page.tsx",
+   "target": "components/job-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/jobs/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/jobs/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "components/logo.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "components/nav.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "components/sidebar.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "components/theme.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/layout.tsx",
+   "target": "lib/onboarding.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/applications/page.tsx",
+   "target": "components/app-metrics.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/applications/page.tsx",
+   "target": "components/placement-ui.tsx",
+   "weight": 7
+  },
+  {
+   "source": "app/(app)/me/applications/page.tsx",
+   "target": "lib/app-metrics.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/applications/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/applications/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/assessments/page.tsx",
+   "target": "lib/intel.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/attendance/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/attendance/page.tsx",
+   "target": "lib/journey.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/coding/page.tsx",
+   "target": "app/actions/coding.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/coding/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/me/coding/page.tsx",
+   "target": "components/coding-ui.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/coding/page.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/me/coding/page.tsx",
+   "target": "lib/coding.ts",
+   "weight": 9
+  },
+  {
+   "source": "app/(app)/me/contests/page.tsx",
+   "target": "components/coding-ui.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/contests/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/me/contests/page.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/me/jobs/page.tsx",
+   "target": "components/drive-status.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/jobs/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 10
+  },
+  {
+   "source": "app/(app)/me/jobs/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/jobs/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/leaderboard/page.tsx",
+   "target": "components/coding-ui.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/me/leaderboard/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/me/leaderboard/page.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/me/leaderboard/page.tsx",
+   "target": "lib/coding.ts",
+   "weight": 7
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "components/app-metrics.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "components/evaluation-list.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "components/score-tiles.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "lib/app-metrics.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "lib/avatar.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "lib/journey.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "components/evaluation-list.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "components/formula.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "components/score-tiles.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "lib/journey.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/performance/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/profile/page.tsx",
+   "target": "app/actions/coding.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/me/profile/page.tsx",
+   "target": "app/actions/me.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/me/profile/page.tsx",
+   "target": "components/student-fields.tsx",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/me/profile/page.tsx",
+   "target": "lib/avatar.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/me/training/page.tsx",
+   "target": "app/actions/me.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "app/actions/mentorship.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "components/evaluation-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "components/evaluation-list.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "lib/intel.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/mentors/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/notifications/page.tsx",
+   "target": "app/actions/notifications.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/notifications/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/notifications/page.tsx",
+   "target": "components/logo.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "components/logo.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "lib/app-metrics.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "lib/intel.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/overview/page.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "components/formula.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 8
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "lib/intel.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/performance/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/placement/page.tsx",
+   "target": "components/app-metrics.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/placement/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/placement/page.tsx",
+   "target": "lib/app-metrics.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/placement/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/reports/[kind]/page.tsx",
+   "target": "components/logo.tsx",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/reports/[kind]/page.tsx",
+   "target": "components/print.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/reports/[kind]/page.tsx",
+   "target": "lib/reports.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/reports/page.tsx",
+   "target": "lib/reports.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/roles/page.tsx",
+   "target": "app/actions/roles.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/roles/page.tsx",
+   "target": "lib/rbac.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "app/actions/admin.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "components/formula.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "lib/mail.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/settings/page.tsx",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "app/actions/mentorship.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "app/actions/students.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "app/actions/users.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/charts.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/delete-student.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/evaluation-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/evaluation-list.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/print.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/score-tiles.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "components/student-fields.tsx",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "lib/avatar.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "lib/journey.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/students/[id]/page.tsx",
+   "target": "lib/placement.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/students/import/page.tsx",
+   "target": "components/students-client.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "app/actions/students.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "components/student-fields.tsx",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "components/students-client.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "lib/avatar.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "lib/intel.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/students/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "app/actions/coding.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "app/actions/training.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 13
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "components/session-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 7
+  },
+  {
+   "source": "app/(app)/training/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "app/actions/training.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "components/client-bits.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "components/rating.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "components/session-fields.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/(app)/training/sessions/[id]/page.tsx",
+   "target": "lib/scope.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/users/page.tsx",
+   "target": "app/actions/users.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/(app)/users/page.tsx",
+   "target": "components/list.tsx",
+   "weight": 15
+  },
+  {
+   "source": "app/(app)/users/page.tsx",
+   "target": "lib/options.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/(app)/users/page.tsx",
+   "target": "lib/rbac.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/actions/admin.ts",
+   "target": "lib/notify.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/admin.ts",
+   "target": "lib/placement.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/actions/admin.ts",
+   "target": "lib/scoring.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/admin.ts",
+   "target": "lib/settings.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/assessments.ts",
+   "target": "lib/notify.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/assessments.ts",
+   "target": "lib/scoring.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/actions/assessments.ts",
+   "target": "lib/sheet.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/actions/auth.ts",
+   "target": "lib/db.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/auth.ts",
+   "target": "lib/mail.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/auth.ts",
+   "target": "lib/password.ts",
+   "weight": 14
+  },
+  {
+   "source": "app/actions/auth.ts",
+   "target": "lib/tokens.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/actions/coding.ts",
+   "target": "lib/coding-points.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/actions/coding.ts",
+   "target": "lib/coding.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/feedback.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/feedback.ts",
+   "target": "lib/notify.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/mentorship.ts",
+   "target": "lib/notify.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/placement.ts",
+   "target": "lib/notify.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/placement.ts",
+   "target": "lib/placement.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/placement.ts",
+   "target": "lib/settings.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/register.ts",
+   "target": "lib/notify.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/register.ts",
+   "target": "lib/periods.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/actions/register.ts",
+   "target": "lib/register-parse.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/register.ts",
+   "target": "lib/sheet.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/roles.ts",
+   "target": "lib/rbac.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/actions/signup.ts",
+   "target": "lib/coding-points.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/actions/signup.ts",
+   "target": "lib/coding.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/signup.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/signup.ts",
+   "target": "lib/onboarding.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/signup.ts",
+   "target": "lib/tokens.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/students.ts",
+   "target": "lib/rbac.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/students.ts",
+   "target": "lib/sheet.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/actions/students.ts",
+   "target": "lib/tokens.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/training.ts",
+   "target": "lib/notify.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/actions/users.ts",
+   "target": "lib/rbac.ts",
+   "weight": 6
+  },
+  {
+   "source": "app/actions/users.ts",
+   "target": "lib/tokens.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/activate/page.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/activate/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/api/attendance/[kind]/route.ts",
+   "target": "lib/periods.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/api/attendance/[kind]/route.ts",
+   "target": "lib/register.ts",
+   "weight": 11
+  },
+  {
+   "source": "app/api/attendance/[kind]/route.ts",
+   "target": "lib/sheet.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/api/cron/coding/route.ts",
+   "target": "lib/coding.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/api/cron/coding/route.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/api/health/route.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/api/reports/[kind]/route.ts",
+   "target": "lib/reports.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/api/reports/[kind]/route.ts",
+   "target": "lib/sheet.ts",
+   "weight": 5
+  },
+  {
+   "source": "app/api/students/template/route.ts",
+   "target": "lib/sheet.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/change-password/page.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/change-password/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/feedback/page.tsx",
+   "target": "app/actions/feedback.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/feedback/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/forgot-password/page.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/forgot-password/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/layout.tsx",
+   "target": "components/theme.tsx",
+   "weight": 2
+  },
+  {
+   "source": "app/layout.tsx",
+   "target": "components/toast.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/login/form.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/login/page.tsx",
+   "target": "app/login/form.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/login/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/login/page.tsx",
+   "target": "lib/mail.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "app/actions/auth.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "app/actions/signup.ts",
+   "weight": 3
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "components/logo.tsx",
+   "weight": 5
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "components/theme.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 2
+  },
+  {
+   "source": "app/onboarding/page.tsx",
+   "target": "lib/onboarding.ts",
+   "weight": 4
+  },
+  {
+   "source": "app/register/page.tsx",
+   "target": "app/register/steps.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/register/page.tsx",
+   "target": "components/auth-shell.tsx",
+   "weight": 3
+  },
+  {
+   "source": "app/register/steps.tsx",
+   "target": "app/actions/signup.ts",
+   "weight": 5
+  },
+  {
+   "source": "components/assessment-fields.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/assessment-fields.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/auth-shell.tsx",
+   "target": "components/logo.tsx",
+   "weight": 9
+  },
+  {
+   "source": "components/auth-shell.tsx",
+   "target": "components/theme.tsx",
+   "weight": 3
+  },
+  {
+   "source": "components/coding-ui.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/delete-student.tsx",
+   "target": "app/actions/students.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/delete-student.tsx",
+   "target": "components/toast.tsx",
+   "weight": 3
+  },
+  {
+   "source": "components/drive-status.tsx",
+   "target": "app/actions/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/drive-status.tsx",
+   "target": "components/toast.tsx",
+   "weight": 3
+  },
+  {
+   "source": "components/evaluation-list.tsx",
+   "target": "components/rating.tsx",
+   "weight": 3
+  },
+  {
+   "source": "components/formula.tsx",
+   "target": "lib/coding-points.ts",
+   "weight": 5
+  },
+  {
+   "source": "components/formula.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/job-fields.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/nav.tsx",
+   "target": "lib/rbac.ts",
+   "weight": 4
+  },
+  {
+   "source": "components/placement-ui.tsx",
+   "target": "app/actions/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/placement-ui.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/placement-ui.tsx",
+   "target": "lib/placement.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/register-bulk.tsx",
+   "target": "app/actions/register.ts",
+   "weight": 7
+  },
+  {
+   "source": "components/register-bulk.tsx",
+   "target": "components/toast.tsx",
+   "weight": 4
+  },
+  {
+   "source": "components/register-bulk.tsx",
+   "target": "lib/periods.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/register-bulk.tsx",
+   "target": "lib/register-parse.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/register-editor.tsx",
+   "target": "app/actions/register.ts",
+   "weight": 7
+  },
+  {
+   "source": "components/register-editor.tsx",
+   "target": "components/toast.tsx",
+   "weight": 5
+  },
+  {
+   "source": "components/register-editor.tsx",
+   "target": "lib/periods.ts",
+   "weight": 7
+  },
+  {
+   "source": "components/register-editor.tsx",
+   "target": "lib/register-parse.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/score-tiles.tsx",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "components/session-fields.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/student-fields.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "components/students-client.tsx",
+   "target": "app/actions/students.ts",
+   "weight": 8
+  },
+  {
+   "source": "components/students-client.tsx",
+   "target": "components/download.ts",
+   "weight": 4
+  },
+  {
+   "source": "components/students-client.tsx",
+   "target": "components/toast.tsx",
+   "weight": 4
+  },
+  {
+   "source": "components/students-client.tsx",
+   "target": "lib/options.ts",
+   "weight": 2
+  },
+  {
+   "source": "lib/app-metrics.ts",
+   "target": "lib/placement.ts",
+   "weight": 4
+  },
+  {
+   "source": "lib/coding.ts",
+   "target": "lib/coding-points.ts",
+   "weight": 5
+  },
+  {
+   "source": "lib/intel.ts",
+   "target": "lib/scoring.ts",
+   "weight": 7
+  },
+  {
+   "source": "lib/intel.ts",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "lib/journey.ts",
+   "target": "lib/intel.ts",
+   "weight": 7
+  },
+  {
+   "source": "lib/journey.ts",
+   "target": "lib/scoring.ts",
+   "weight": 6
+  },
+  {
+   "source": "lib/journey.ts",
+   "target": "lib/settings.ts",
+   "weight": 3
+  },
+  {
+   "source": "lib/options.ts",
+   "target": "lib/rbac.ts",
+   "weight": 2
+  },
+  {
+   "source": "lib/register-parse.ts",
+   "target": "lib/periods.ts",
+   "weight": 5
+  },
+  {
+   "source": "lib/register.ts",
+   "target": "lib/periods.ts",
+   "weight": 6
+  },
+  {
+   "source": "lib/register.ts",
+   "target": "lib/sheet.ts",
+   "weight": 4
+  },
+  {
+   "source": "lib/reports.ts",
+   "target": "lib/coding-points.ts",
+   "weight": 6
+  },
+  {
+   "source": "lib/reports.ts",
+   "target": "lib/intel.ts",
+   "weight": 2
+  },
+  {
+   "source": "lib/reports.ts",
+   "target": "lib/placement.ts",
+   "weight": 5
+  },
+  {
+   "source": "lib/reports.ts",
+   "target": "lib/rbac.ts",
+   "weight": 2
+  },
+  {
+   "source": "lib/reports.ts",
+   "target": "lib/scoring.ts",
+   "weight": 4
+  },
+  {
+   "source": "lib/settings.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "lib/settings.ts",
+   "target": "lib/placement.ts",
+   "weight": 2
+  },
+  {
+   "source": "lib/settings.ts",
+   "target": "lib/scoring.ts",
+   "weight": 3
+  },
+  {
+   "source": "lib/sheet.ts",
+   "target": "lib/csv.ts",
+   "weight": 5
+  },
+  {
+   "source": "lib/tokens.ts",
+   "target": "lib/mail.ts",
+   "weight": 7
+  },
+  {
+   "source": "proxy.ts",
+   "target": "lib/session.ts",
+   "weight": 5
+  },
+  {
+   "source": "scripts/import-roster.ts",
+   "target": "lib/csv.ts",
+   "weight": 2
+  },
+  {
+   "source": "scripts/import-roster.ts",
+   "target": "lib/db.ts",
+   "weight": 2
+  },
+  {
+   "source": "scripts/scoring.check.ts",
+   "target": "lib/coding-points.ts",
+   "weight": 4
+  },
+  {
+   "source": "scripts/scoring.check.ts",
+   "target": "lib/periods.ts",
+   "weight": 3
+  },
+  {
+   "source": "scripts/scoring.check.ts",
+   "target": "lib/register-parse.ts",
+   "weight": 2
+  },
+  {
+   "source": "scripts/scoring.check.ts",
+   "target": "lib/scoring.ts",
+   "weight": 11
+  },
+  {
+   "source": "scripts/seed-drives.ts",
+   "target": "lib/db.ts",
+   "weight": 2
+  },
+  {
+   "source": "scripts/seed.ts",
+   "target": "lib/db.ts",
+   "weight": 3
+  },
+  {
+   "source": "scripts/seed.ts",
+   "target": "lib/password.ts",
+   "weight": 5
+  },
+  {
+   "source": "scripts/seed.ts",
+   "target": "lib/rbac.ts",
+   "weight": 2
+  }
+ ],
+ "hubs": [
+  {
+   "id": "models/index.ts",
+   "label": "models/index.ts",
+   "uses": 68
+  },
+  {
+   "id": "lib/auth.ts",
+   "label": "lib/auth.ts",
+   "uses": 63
+  },
+  {
+   "id": "components/ui.tsx",
+   "label": "components/ui.tsx",
+   "uses": 56
+  },
+  {
+   "id": "lib/format.ts",
+   "label": "lib/format.ts",
+   "uses": 33
+  },
+  {
+   "id": "components/form.tsx",
+   "label": "components/form.tsx",
+   "uses": 29
+  },
+  {
+   "id": "lib/form.ts",
+   "label": "lib/form.ts",
+   "uses": 28
+  }
+ ]
+}
