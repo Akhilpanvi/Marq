@@ -7,12 +7,12 @@ import { profiles } from '@/lib/intel'
 import { Batch, Student, User } from '@/models'
 import { Avatar, Badge, Card, PageHeader, Score, Table } from '@/components/ui'
 import { Filters, Pager, PAGE_SIZE, pageOf, Select, sp, escapeRe } from '@/components/list'
-import { ActionForm, Modal, ActionButton } from '@/components/form'
+import { ActionForm, Modal } from '@/components/form'
 import { StudentFields, STATUS_LABEL } from '@/components/student-fields'
 import { BulkBar, SelectAll } from '@/components/students-client'
-import { saveStudent, sendPlacementInvites } from '@/app/actions/students'
+import { placementInviteCounts, saveStudent } from '@/app/actions/students'
+import { PlacementInvites } from '@/components/placement-invites'
 
-export const maxDuration = 60 // sending ~50 registration emails, about 2 a second
 export const metadata = { title: 'Students' }
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -70,11 +70,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300">Active <b className="tabular-nums">{nActive}</b></span>
         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">Invited <b className="tabular-nums">{nInvited}</b></span>
         <span className="rounded-full border border-line bg-subtle px-3 py-1 text-muted">Not registered <b className="tabular-nums text-fg">{nNone}</b></span>
-        {canAccounts && nInvited + nNone > 0 && (
-          <ActionButton action={sendPlacementInvites} fields={{}} className="btn-primary py-1.5 text-xs" confirm={`Email the registration link to the placement mail ID of all ${nInvited + nNone} students who haven’t registered yet (${nInvited} invited + ${nNone} not registered)? Invited students get a fresh link; their old link stops working. This can take up to a minute.`}>
-            Email registration links to placement mail IDs ({nInvited + nNone})
-          </ActionButton>
-        )}
+        {canAccounts && <PlacementInvites {...(await placementInviteCounts())} />}
         <Link href={sp(params, 'pm') === 'missing' ? '/students' : '/students?pm=missing'} className={`rounded-full border px-3 py-1 ${noPm ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
           No placement mail ID <b className="tabular-nums">{noPm}</b> {sp(params, 'pm') === 'missing' ? '· show all' : noPm ? '· show' : ''}
         </Link>

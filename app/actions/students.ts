@@ -325,37 +325,62 @@ export async function setupBatchA(_: State, _fd: FormData): Promise<State> {
 
 /* ───────────── Registration links to placement mail IDs ───────────── */
 
-/** Email the registration (activation) link to the PLACEMENT MAIL ID of every active student who hasn't registered yet:
- *  invited students get a fresh link (the old one stops working), students without an account get one created first.
- *  Registered and deactivated students are never touched. The account itself keeps the university email. */
+const RECENT_HOURS = 6 // a link issued in the last 6 hours counts as "already sent" — no duplicate emails on a re-run
+const BUDGET_MS = 7_000 // each call stops well inside the server time limit; the button calls again until done
+
+type Cand = { _id: Types.ObjectId; name: string; email: string; regNo: string; personalEmail?: string | null }
+/** Who still needs a registration link at their placement mail ID: active students not registered (invited or no
+ *  account), with a placement mail ID, and no link issued in the last RECENT_HOURS. */
+async function inviteCandidates(scope: Record<string, unknown>) {
+  const students = await Student.find({ ...scope, status: 'active' }).select('name email regNo personalEmail').sort({ regNo: 1 }).lean()
+  const users = new Map((await User.find({ student: { $in: students.map(s => s._id) } }).select('name email status student invitedAt').lean()).map(u => [String(u.student), u]))
+  const recentCut = Date.now() - RECENT_HOURS * 3_600_000
+  const todo: Cand[] = [], noMail: string[] = []
+  let recent = 0
+  for (const s of students) {
+    const u = users.get(String(s._id))
+    if (u && u.status !== 'invited') continue // registered or deactivated
+    if (!s.personalEmail || !EMAIL.test(s.personalEmail)) { noMail.push(s.regNo); continue }
+    if (u?.invitedAt && +u.invitedAt > recentCut) { recent++; continue }
+    todo.push(s)
+  }
+  return { todo, noMail, recent, users }
+}
+
+/** For the Students page button: how many are still to send, and how many were sent recently. */
+export async function placementInviteCounts() {
+  const me = await guard('users.create')
+  const { todo, noMail, recent } = await inviteCandidates(await studentScope(me))
+  return { todo: todo.length, recent, noMail: noMail.length }
+}
+
+/** Sends registration links (activation) to placement mail IDs — as many as fit in one short call; call again until remaining = 0.
+ *  Invited students get a fresh link; students without an account get one created. The account keeps the university email. */
 export async function sendPlacementInvites(_: State, _fd: FormData): Promise<State> {
   return attempt(async () => {
+    const t0 = Date.now()
     const me = await guard('users.create')
     if (!mailEnabled()) throw new Invalid('Email is not set up on this server, so no links can be sent.')
     const role = await Role.findOne({ key: 'student' }).select('_id').lean()
     if (!role) throw new Invalid('The Student role is missing.')
-    const students = await Student.find({ ...(await studentScope(me)), status: 'active' }).select('name email regNo personalEmail').sort({ regNo: 1 }).lean()
-    const users = new Map((await User.find({ student: { $in: students.map(s => s._id) } }).select('name email status student').lean()).map(u => [String(u.student), u]))
+    const { todo, noMail, users } = await inviteCandidates(await studentScope(me))
     let sent = 0, created = 0
-    const noMail: string[] = [], failed: string[] = []
-    for (const s of students) {
-      let u: { _id: Types.ObjectId; name: string; email: string; status?: string | null } | undefined = users.get(String(s._id))
-      if (u && u.status !== 'invited') continue // already registered, or deactivated
-      if (!s.personalEmail || !EMAIL.test(s.personalEmail)) { noMail.push(s.regNo); continue }
+    const failed: string[] = []
+    for (const s of todo) {
+      if (Date.now() - t0 > BUDGET_MS) break
+      let u: { _id: Types.ObjectId; name: string; email: string } | undefined = users.get(String(s._id))
       if (!u) {
         if (await User.exists({ email: s.email })) { failed.push(s.regNo); continue }
         u = await User.create({ name: s.name, email: s.email, type: 'student', role: role._id, student: s._id, status: 'invited', createdBy: me._id })
         created++
       }
-      const notSent = await issueLink(u, 'activate', s.personalEmail)
+      const notSent = await issueLink(u, 'activate', s.personalEmail!)
       if (notSent) failed.push(s.regNo)
       else sent++
-      await new Promise(r => setTimeout(r, 450)) // the email service accepts about 2 messages a second
     }
-    await audit(me, 'users', 'account.placementInvites', `${sent} students`, undefined, { sent, created, noPlacementMail: noMail, failed })
+    const remaining = Math.max(0, todo.length - sent - failed.length)
+    await audit(me, 'users', 'account.placementInvites', `${sent} students`, undefined, { sent, created, failed, remaining })
     revalidatePath('/students')
-    revalidatePath('/users')
-    const extra = [noMail.length ? `${noMail.length} have no placement mail ID (${noMail.slice(0, 5).join(', ')}${noMail.length > 5 ? '…' : ''})` : '', failed.length ? `${failed.length} could not be sent (${failed.slice(0, 5).join(', ')}${failed.length > 5 ? '…' : ''})` : ''].filter(Boolean).join('; ')
-    return { ok: `Sent ${sent} registration link${sent === 1 ? '' : 's'} to placement mail IDs${created ? ` (${created} new account${created === 1 ? '' : 's'} created)` : ''}.${extra ? ` ${extra}.` : ''}` }
+    return { ok: `Sent ${sent}`, data: { sent, created, failed, remaining, noMail: noMail.length } }
   })
 }
