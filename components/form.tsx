@@ -84,3 +84,24 @@ export function Modal({ label, title, children, className = 'btn-primary', wide 
     </>
   )
 }
+
+/** A stat card that opens a pop-up with the detail behind the number. Same look as <Stat>. */
+export function StatModal({ label, value, hint, icon, title, children }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ReactNode; title: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  return (
+    <>
+      <button type="button" onClick={() => ref.current?.showModal()} className="card block w-full p-4 text-left transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-accent">
+        <div className="flex items-center justify-between text-xs font-medium text-muted">{label}{icon}</div>
+        <div className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
+        <div className="mt-0.5 truncate text-xs text-muted">{hint}{hint ? ' · ' : ''}<span className="text-accent">View details →</span></div>
+      </button>
+      <dialog ref={ref} className="card m-auto w-[calc(100%-2rem)] max-w-3xl p-0 text-fg backdrop:backdrop-blur-[1px]" onClick={e => e.target === ref.current && ref.current.close()}>
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 className="font-semibold">{title}</h2>
+          <button type="button" className="btn-ghost px-2" aria-label="Close" onClick={() => ref.current?.close()}><X className="size-4" /></button>
+        </div>
+        <div className="max-h-[75vh] overflow-y-auto p-5">{children}</div>
+      </dialog>
+    </>
+  )
+}

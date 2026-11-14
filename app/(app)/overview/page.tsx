@@ -11,7 +11,7 @@ import { Bars } from '@/components/charts'
 import { AttendanceDays } from '@/components/attendance-days'
 import { OFFERED } from '@/lib/placement'
 import { MarqWordmark } from '@/components/logo'
-import { Modal } from '@/components/form'
+import { Modal, StatModal } from '@/components/form'
 import type { Types } from 'mongoose'
 
 export const metadata = { title: 'Overview' }
@@ -75,9 +75,15 @@ export default async function Overview() {
         <section>
           <SectionTitle n={1} title="Placement" href="/placement" />
           <Grid>
-            <Stat label="Students placed" value={placed.length} hint={`of ${active} active students`} icon={Trophy} href="/placement" />
-            <Stat label="Offers" value={m.offers} hint={`${m.accepted} accepted`} />
-            <Stat label="Applications" value={m.total} hint={`${m.companies} companies · ${m.notApplied} “not applied” answers`} href="/placement" />
+            <StatModal label="Students placed" value={placed.length} hint={`of ${active} active students`} icon={<Trophy className="size-4" />} title={`Students placed · ${placed.length}`}>
+              <OfferList match={sMatch} />
+            </StatModal>
+            <StatModal label="Offers" value={m.offers} hint={`${m.accepted} accepted`} title={`Offers · ${m.offers} (${m.accepted} accepted)`}>
+              <OfferList match={sMatch} />
+            </StatModal>
+            <StatModal label="Applications" value={m.total} hint={`${m.companies} companies · ${m.notApplied} “not applied” answers`} title={`Applications · ${m.total} across ${m.companies} companies`}>
+              <ApplicationsByCompany match={sMatch} />
+            </StatModal>
             <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
               <Modal label="View students →" title={`Drive status · ${answered.length} answered, ${active - answered.length} not yet`} className="text-accent hover:underline" wide>
                 <DriveAnswerLists answered={answered as Types.ObjectId[]} />
@@ -213,5 +219,49 @@ async function DriveAnswerLists({ answered }: { answered: Types.ObjectId[] }) {
       <div><h3 className="mb-2 font-semibold text-emerald-600">Answered · {yes.length}</h3>{list(yes)}</div>
       <div><h3 className="mb-2 font-semibold text-amber-600">Not yet · {no.length}</h3>{list(no)}</div>
     </div>
+  )
+}
+
+const OFFER_TONE = { Offered: 'green', Accepted: 'green', Declined: 'zinc' } as const
+
+/** Everyone with an offer: who, which company and role, and where it stands. */
+async function OfferList({ match }: { match: Record<string, unknown> }) {
+  const apps = await Application.find({ ...match, status: { $in: OFFERED } }).select('student company role status updatedAt').sort({ updatedAt: -1 }).lean()
+  const students = await Student.find({ _id: { $in: apps.map(a => a.student) } }).select('name regNo department').lean()
+  const by = new Map(students.map(s => [String(s._id), s]))
+  if (!apps.length) return <Empty>No offers recorded yet. They appear here when a student’s drive status is set to “Final select / Offer rolled out”.</Empty>
+  return (
+    <Table head={['Student', 'Company · role', 'Status', 'Updated']}>
+      {apps.map(a => {
+        const s = by.get(String(a.student))
+        return (
+          <tr key={String(a._id)}>
+            <td className="td"><Link href={`/students/${a.student}`} className="font-medium hover:underline">{s?.name ?? '—'}</Link><div className="font-mono text-xs text-muted">{s?.regNo} · {s?.department}</div></td>
+            <td className="td"><div className="font-medium">{a.company}</div><div className="text-xs text-muted">{a.role}</div></td>
+            <td className="td"><Badge tone={OFFER_TONE[a.status as keyof typeof OFFER_TONE] ?? 'zinc'}>{a.status}</Badge></td>
+            <td className="td text-muted">{day(a.updatedAt)}</td>
+          </tr>
+        )
+      })}
+    </Table>
+  )
+}
+
+/** Per company: how many students applied and how many offers — "not applied" answers are not applications. */
+async function ApplicationsByCompany({ match }: { match: Record<string, unknown> }) {
+  const rows = await Application.aggregate<{ _id: string; students: number; offers: number; inProcess: number }>([
+    { $match: { ...match, status: { $ne: 'Not Applied' } } },
+    { $group: { _id: '$company', students: { $addToSet: '$student' }, offers: { $sum: { $cond: [{ $in: ['$status', OFFERED] }, 1, 0] } }, inProcess: { $sum: { $cond: [{ $in: ['$status', ['Applied - No Response', 'Written Test Completed', 'Technical Interview Scheduled', 'Technical Interview Completed', 'HR Interview Completed', 'Written Test Scheduled', 'HR Interview Scheduled', 'Applied']] }, 1, 0] } } } },
+    { $project: { students: { $size: '$students' }, offers: 1, inProcess: 1 } },
+    { $sort: { students: -1 } },
+  ])
+  if (!rows.length) return <Empty>No applications yet.</Empty>
+  return (
+    <>
+      <Table head={['Company', 'Students applied', 'In process', 'Offers']}>
+        {rows.map(r => <tr key={r._id}><td className="td font-medium">{r._id}</td><td className="td tabular-nums">{r.students}</td><td className="td tabular-nums">{r.inProcess}</td><td className="td tabular-nums">{r.offers}</td></tr>)}
+      </Table>
+      <p className="mt-3 text-xs text-muted">For names per drive (applied / not applied / no response), open <Link href="/placement" className="text-accent hover:underline">Placement Analytics → Drive responses</Link>.</p>
+    </>
   )
 }
