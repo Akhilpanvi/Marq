@@ -85,8 +85,8 @@ export default async function Overview() {
               <ApplicationsByCompany match={sMatch} />
             </StatModal>
             <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
-              <Modal label="View students →" title={`Drive status · ${answered.length} answered, ${active - answered.length} not yet`} className="text-accent hover:underline" wide>
-                <DriveAnswerLists answered={answered as Types.ObjectId[]} />
+              <Modal label="View students →" title="Who has answered the drives" className="text-accent hover:underline" xl>
+                <DriveAnswerLists scope={scope} />
               </Modal>
             } />
           </Grid>
@@ -204,21 +204,41 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
 }
 
 /** Who has updated at least one drive, and who hasn't (active students only). */
-async function DriveAnswerLists({ answered }: { answered: Types.ObjectId[] }) {
-  const all = await Student.find({ status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean()
-  const done = new Set(answered.map(String))
-  const yes = all.filter(s => done.has(String(s._id))), no = all.filter(s => !done.has(String(s._id)))
-  const list = (xs: typeof all) => (
+async function DriveAnswerLists({ scope }: { scope: Record<string, unknown> }) {
+  const [jobs, all] = await Promise.all([
+    Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean(),
+    Student.find({ ...scope, status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean(),
+  ])
+  const total = jobs.length
+  // per student: how many of the drives they answered (any answer counts — including "didn't apply")
+  const per = new Map((await Application.aggregate<{ _id: Types.ObjectId; n: number }>([
+    { $match: { job: { $in: jobs.map(j => j._id) }, student: { $in: all.map(s => s._id) } } },
+    { $group: { _id: '$student', jobs: { $addToSet: '$job' } } }, { $project: { n: { $size: '$jobs' } } },
+  ])).map(r => [String(r._id), r.n]))
+  const rows = all.map(s => ({ s, n: Math.min(per.get(String(s._id)) ?? 0, total) }))
+  const full = rows.filter(r => total > 0 && r.n >= total)
+  const partial = rows.filter(r => r.n > 0 && r.n < total).sort((a, b) => b.n - a.n)
+  const none = rows.filter(r => r.n === 0)
+  const list = (xs: typeof rows, tone: string) => (
     <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto text-sm">
-      {xs.map(s => <li key={String(s._id)} className="flex justify-between gap-3 py-1.5"><Link href={`/students/${s._id}`} className="hover:underline">{s.name}</Link><span className="font-mono text-xs text-muted">{s.regNo}</span></li>)}
+      {xs.map(({ s, n }) => (
+        <li key={String(s._id)} className="flex items-center justify-between gap-3 py-1.5">
+          <span className="min-w-0"><Link href={`/students/${s._id}`} className="hover:underline">{s.name}</Link><span className="ml-2 font-mono text-xs text-muted">{s.regNo}</span></span>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${tone}`}>{n}/{total}</span>
+        </li>
+      ))}
       {!xs.length && <li className="py-2 text-muted">None</li>}
     </ul>
   )
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <div><h3 className="mb-2 font-semibold text-emerald-600">Answered · {yes.length}</h3>{list(yes)}</div>
-      <div><h3 className="mb-2 font-semibold text-amber-600">Not yet · {no.length}</h3>{list(no)}</div>
-    </div>
+    <>
+      <p className="mb-4 text-sm text-muted">{total} drive{total === 1 ? '' : 's'} published. A student has “answered” a drive when they set their status for it — “I didn’t apply” counts as an answer.</p>
+      <div className="grid gap-6 md:grid-cols-3">
+        <div><h3 className="mb-2 font-semibold text-emerald-600">All drives answered · {full.length}</h3>{list(full, 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')}</div>
+        <div><h3 className="mb-2 font-semibold text-amber-600">Partly answered · {partial.length}</h3>{list(partial, 'bg-amber-500/15 text-amber-700 dark:text-amber-300')}</div>
+        <div><h3 className="mb-2 font-semibold text-red-600">Not answered yet · {none.length}</h3>{list(none, 'bg-red-500/15 text-red-700 dark:text-red-300')}</div>
+      </div>
+    </>
   )
 }
 

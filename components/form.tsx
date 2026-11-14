@@ -69,12 +69,12 @@ export function ActionButton({ action, fields, children, className = 'btn-outlin
 }
 
 /** Native <dialog> modal. */
-export function Modal({ label, title, children, className = 'btn-primary', wide }: { label: React.ReactNode; title: string; children: React.ReactNode; className?: string; wide?: boolean }) {
+export function Modal({ label, title, children, className = 'btn-primary', wide, xl }: { label: React.ReactNode; title: string; children: React.ReactNode; className?: string; wide?: boolean; xl?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
   return (
     <>
       <button type="button" className={className} onClick={() => ref.current?.showModal()}>{label}</button>
-      <dialog ref={ref} className={`card m-auto w-[calc(100%-2rem)] p-0 text-fg backdrop:backdrop-blur-[1px] ${wide ? 'max-w-3xl' : 'max-w-lg'}`} onClick={e => e.target === ref.current && ref.current.close()}>
+      <dialog ref={ref} className={`card m-auto w-[calc(100%-2rem)] p-0 text-fg backdrop:backdrop-blur-[1px] ${xl ? 'max-w-5xl' : wide ? 'max-w-3xl' : 'max-w-lg'}`} onClick={e => e.target === ref.current && ref.current.close()}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-semibold">{title}</h2>
           <button type="button" className="btn-ghost px-2" aria-label="Close" onClick={() => ref.current?.close()}><X className="size-4" /></button>
