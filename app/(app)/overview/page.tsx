@@ -219,19 +219,26 @@ async function DriveAnswerLists({ scope, me }: { scope: Record<string, unknown>;
   const full = rows.filter(r => total > 0 && r.n >= total)
   const partial = rows.filter(r => r.n > 0 && r.n < total).sort((a, b) => b.n - a.n)
   const none = rows.filter(r => r.n === 0)
-  const list = (xs: typeof rows, tone: string) => (
-    <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto text-sm">
-      {xs.map(({ s, n }) => (
-        <li key={String(s._id)} className="flex items-center justify-between gap-3 py-1.5">
-          <span className="min-w-0"><Link href={`/students/${s._id}`} className="hover:underline">{s.name}</Link><span className="ml-2 font-mono text-xs text-muted">{s.regNo}</span></span>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${tone}`}>{n}/{total}</span>
-        </li>
-      ))}
-      {!xs.length && <li className="py-2 text-muted">None</li>}
-    </ul>
+  // one boxed panel per group, one small card per student: name on top (wraps), ID underneath, n/total badge at the right
+  const panel = (title: string, xs: typeof rows, head: string, badge: string) => (
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-subtle/40">
+      <h3 className={`flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 text-sm font-semibold ${head}`}><span>{title}</span><span className="rounded-full bg-black/10 px-2 py-0.5 text-xs tabular-nums dark:bg-white/10">{xs.length}</span></h3>
+      <ul className="max-h-[55vh] space-y-2 overflow-y-auto p-3">
+        {xs.map(({ s, n }) => (
+          <li key={String(s._id)} className="flex items-start justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 shadow-sm">
+            <div className="min-w-0">
+              <Link href={`/students/${s._id}`} className="block text-sm leading-snug font-medium break-words hover:underline">{s.name}</Link>
+              <div className="mt-0.5 font-mono text-xs text-muted">{s.regNo}</div>
+            </div>
+            <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${badge}`}>{n}/{total}</span>
+          </li>
+        ))}
+        {!xs.length && <li className="px-1 py-3 text-sm text-muted">None</li>}
+      </ul>
+    </section>
   )
   return (
-    <>
+    <div className="text-left text-sm leading-normal font-normal whitespace-normal text-fg"> {/* the pop-up sits inside a one-line caption: undo its no-wrap / truncate */}
       {can(me, 'reports.export') && (
         <div className="mb-4 flex flex-wrap gap-2">
           <a className="btn-outline" href="/api/reports/driveAnswers?format=xlsx"><Download className="size-4" />Excel</a>
@@ -239,12 +246,12 @@ async function DriveAnswerLists({ scope, me }: { scope: Record<string, unknown>;
         </div>
       )}
       <p className="mb-4 text-sm text-muted">{total} drive{total === 1 ? '' : 's'} published. A student has “answered” a drive when they set their status for it — “I didn’t apply” counts as an answer.</p>
-      <div className="grid gap-6 md:grid-cols-3">
-        <div><h3 className="mb-2 font-semibold text-emerald-600">All drives answered · {full.length}</h3>{list(full, 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')}</div>
-        <div><h3 className="mb-2 font-semibold text-amber-600">Partly answered · {partial.length}</h3>{list(partial, 'bg-amber-500/15 text-amber-700 dark:text-amber-300')}</div>
-        <div><h3 className="mb-2 font-semibold text-red-600">Not answered yet · {none.length}</h3>{list(none, 'bg-red-500/15 text-red-700 dark:text-red-300')}</div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {panel('All drives answered', full, 'text-emerald-700 dark:text-emerald-300', 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')}
+        {panel('Partly answered', partial, 'text-amber-700 dark:text-amber-300', 'bg-amber-500/15 text-amber-700 dark:text-amber-300')}
+        {panel('Not answered yet', none, 'text-red-700 dark:text-red-300', 'bg-red-500/15 text-red-700 dark:text-red-300')}
       </div>
-    </>
+    </div>
   )
 }
 
