@@ -4,7 +4,7 @@ import { Briefcase, CalendarClock, ClipboardCheck, MessagesSquare } from 'lucide
 import { requireStudent } from '@/lib/auth'
 import { journey } from '@/lib/journey'
 import { appMetrics } from '@/lib/app-metrics'
-import { placementStatus, statusTone } from '@/lib/placement'
+import { NUDGE_DAYS, daysSince, isWaiting, placementStatus, statusTone } from '@/lib/placement'
 import { day } from '@/lib/format'
 import { Assessment, Job, Student, TrainingSession } from '@/models'
 import { Avatar, Badge, Card, Empty, KV, Meter, PageHeader } from '@/components/ui'
@@ -29,6 +29,7 @@ export default async function StudentDashboard() {
   const answered = new Set(j.apps.map(a => String(a.job)))
   const pendingDrives = (await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()).filter(x => !answered.has(String(x._id))).length
 
+  const waiting = j.apps.filter(a => isWaiting(a.status) && daysSince(a.updatedAt) >= NUDGE_DAYS)
   return (
     <>
       <PageHeader title={`Welcome, ${s.name.split(' ')[0]}`} description="Your Marquee journey at a glance." />
@@ -45,7 +46,14 @@ export default async function StudentDashboard() {
         </div>
       </div>
 
-      {pendingDrives > 0 && <Link href="/me/jobs" className="mb-6 block rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{pendingDrives} company drive{pendingDrives === 1 ? '' : 's'}</b> need your status — update now →</Link>}
+      {pendingDrives > 0 && <Link href="/me/jobs" className="mb-6 block rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"><b>{pendingDrives} {pendingDrives === 1 ? 'company needs' : 'companies need'} your status</b> — tell us where you are →</Link>}
+      {waiting.length > 0 && (
+        <Card title="Drives to update" icon={Briefcase} pad={false} className="mb-6">
+          <ul className="divide-y divide-line">
+            {waiting.map(a => <li key={String(a._id)}><Link href="/me/jobs" className="flex min-h-11 items-center justify-between gap-2 px-5 py-2.5 text-sm hover:bg-subtle"><span><b>{a.company}</b> <span className="text-muted">· {a.role}</span></span><span className="text-xs text-amber-700 dark:text-amber-300">waiting {daysSince(a.updatedAt)} days</span></Link></li>)}
+          </ul>
+        </Card>
+      )}
       <ScoreTiles p={j.p} explain="/me/performance#formula" />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

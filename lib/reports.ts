@@ -107,12 +107,14 @@ export const REPORTS: Record<string, Def> = {
       const { ids } = await scopedStudents(me, p)
       const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ createdAt: 1 }).lean()
       const apps = await Application.find({ job: { $in: jobs.map(j => j._id) }, student: { $in: ids } }).select('job status').lean()
+      // The Google-Form stages, plus what students report after an offer, so the stage columns add up to "Answered".
+      const stages = [...DRIVE_OPTIONS, ['Offer accepted', 'Accepted'], ['Offer declined', 'Declined']] as const
       return {
         title: 'Drive status',
-        columns: ['Company', 'Role', 'Registration', 'Answered', 'Not answered', ...DRIVE_OPTIONS.map(([l]) => l)],
+        columns: ['Company', 'Role', 'Registration', 'Answered', 'Not answered', ...stages.map(([l]) => l)],
         rows: jobs.map(j => {
           const a = apps.filter(x => String(x.job) === String(j._id))
-          return [j.company?.name ?? '', j.role, j.status === 'open' ? 'Open' : 'Closed', a.length, ids.length - a.length, ...DRIVE_OPTIONS.map(([, s]) => a.filter(x => x.status === s).length)]
+          return [j.company?.name ?? '', j.role, j.status === 'open' ? 'Open' : 'Closed', a.length, ids.length - a.length, ...stages.map(([, s]) => a.filter(x => x.status === s || (s === 'Applied - No Response' && x.status === 'Applied')).length)]
         }),
       }
     },

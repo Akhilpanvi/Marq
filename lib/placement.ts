@@ -64,9 +64,9 @@ export const DRIVE_CHOICES: DriveChoice[] = [
 export const DRIVE_GROUPS: { id: DriveGroup; title: string }[] = [
   { id: 'none', title: 'I didn’t apply' },
   { id: 'going', title: 'I applied — still in the process' },
-  { id: 'out', title: 'I wasn’t selected' },
   { id: 'offer', title: 'I received an offer' },
   { id: 'decision', title: 'About the offer' },
+  { id: 'out', title: 'I wasn’t selected' },
 ]
 /** Statuses a student can choose from the pop-up. Accepted / Declined only make sense after an offer. */
 export const driveChoicesFor = (current?: string | null) =>

@@ -7,7 +7,6 @@ import { Application, Company, Job } from '@/models'
 import { Badge, Card, Empty, PageHeader } from '@/components/ui'
 import { Filters, Select, sp } from '@/components/list'
 import { DriveStatus } from '@/components/drive-status'
-import { driveLabel } from '@/lib/placement'
 
 export const metadata = { title: 'Job Opportunities' }
 
@@ -20,16 +19,16 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   if (type) filter.type = type
   if (/^[a-f0-9]{24}$/.test(company)) filter.company = company
   if (min) filter.ctc = { $gte: min }
-  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ status: -1, deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status').lean(), companyOptions()])
+  const [jobs, mine, companies] = await Promise.all([Job.find(filter).sort({ status: -1, deadline: 1, createdAt: -1 }).limit(100).lean(), Application.find({ student: me.student }).select('job status updatedAt history').lean(), companyOptions()])
   const cos = new Map((await Company.find({ _id: { $in: jobs.map(j => j.company) } }).lean()).map(c => [String(c._id), c]))
-  const applied = new Map(mine.filter(a => a.job).map(a => [String(a.job), a.status]))
+  const applied = new Map(mine.filter(a => a.job).map(a => [String(a.job), a]))
   const unanswered = jobs.filter(j => !applied.has(String(j._id))).length
   return (
     <>
-      <PageHeader title="Job Opportunities" description="Drives published by the placement team. For every drive, answer two quick questions — did you apply, and how far have you reached. Update it whenever something changes; it feeds the programme's placement analysis." />
+      <PageHeader title="Job Opportunities" description="Drives published by the placement team. Tell us where you are with each company, and update it whenever something changes." />
       {jobs.length > 0 && (unanswered > 0
-        ? <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">You’ve answered <b>{jobs.length - unanswered} of {jobs.length}</b> drives — <b>{unanswered} drive{unanswered === 1 ? '' : 's'}</b> still need your status. Answer “Did you apply?” on each card below — “No” counts as an answer.</div>
-        : <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">✓ You’ve answered all <b>{jobs.length}</b> drives. Update a card whenever something changes.</div>)}
+        ? <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">You’ve answered <b>{jobs.length - unanswered} of {jobs.length}</b> companies — tap ‘Set my status’ on each card to tell us where you are.</div>
+        : <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">✓ You’ve answered all <b>{jobs.length}</b> drives. Tap ‘Update my status’ on a card whenever something changes.</div>)}
       <Card pad={false} className="mb-6">
         <Filters params={params} placeholder="Search role, skill or location">
           <Select name="company" value={company} options={companies} all="All companies" />
@@ -41,7 +40,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
         {jobs.map(j => {
           const c = cos.get(String(j.company))
           const closed = j.status === 'closed' || (!!j.deadline && j.deadline < new Date())
-          const status = applied.get(String(j._id))
+          const app = applied.get(String(j._id))
           return (
             <Card key={String(j._id)}>
               <div className="flex items-start gap-3">
@@ -58,7 +57,8 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
               {j.eligibility && <p className="mt-1 text-xs text-muted">Eligibility: {j.eligibility}</p>}
               {j.process && <p className="mt-1 text-xs text-muted">Process: {j.process}</p>}
               {j.link && <div className="mt-3"><a href={j.link} target="_blank" rel="noopener noreferrer" className="btn-ghost -ml-2"><ExternalLink className="size-4" />Apply on the company site</a></div>}
-              <DriveStatus job={String(j._id)} status={status} formLabel={driveLabel(status)} />
+              <DriveStatus job={String(j._id)} company={c?.name ?? ''} role={j.role} status={app?.status} updatedAt={app?.updatedAt ? new Date(app.updatedAt).toISOString() : undefined}
+                history={(app?.history ?? []).map(h => ({ to: h.to ?? undefined, at: h.at ? new Date(h.at).toISOString() : undefined, remarks: h.remarks ?? undefined }))} />
             </Card>
           )
         })}

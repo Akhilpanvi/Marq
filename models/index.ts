@@ -328,6 +328,7 @@ const applicationSchema = new Schema(
     key: { type: String, required: true }, // normalised company|role, blocks duplicates per student
     link: String,
     appliedOn: Date,
+    nudgedAt: Date, // last "any news?" reminder sent to the student
     source: { type: String, default: 'MARQ' },
     status: { type: String, required: true, index: true },
     remarks: String,

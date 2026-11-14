@@ -3,10 +3,10 @@ import { revalidatePath } from 'next/cache'
 import type { Types } from 'mongoose'
 import { assertStudentAccess, audit, can, currentUser, guard, type Me } from '@/lib/auth'
 import { attempt, date, Invalid, link, list, need, num, oid, oneOf, str, type State } from '@/lib/form'
-import { appKey, DRIVE_OPTIONS } from '@/lib/placement'
+import { appKey, DRIVE_CHOICES, driveChoice, OFFERED } from '@/lib/placement'
 import { getStatuses } from '@/lib/settings'
-import { notifyStudents } from '@/lib/notify'
-import { Application, Company, Job, Student } from '@/models'
+import { notifyStudents, notifyUsers } from '@/lib/notify'
+import { Application, Company, Job, Role, Student, User } from '@/models'
 
 const JOB_TYPES = ['Full-time', 'Internship', 'Internship + Full-time', 'Contract'] as const
 
@@ -162,18 +162,38 @@ export async function setDriveStatus(_: State, fd: FormData): Promise<State> {
     if (!me?.student) throw new Invalid('Only students report their own drive status.')
     const job = await Job.findById(oid(fd, 'job')).populate<{ company: { name: string } }>('company', 'name').lean()
     if (!job || job.status === 'draft') throw new Invalid('Opportunity not found.')
-    const status = oneOf(fd, 'status', DRIVE_OPTIONS.map(([, s]) => s))
-    const remarks = str(fd, 'remarks', 500)
+    const status = oneOf(fd, 'status', DRIVE_CHOICES.map(c => c.value))
+    const note = str(fd, 'remarks', 500)
     const key = appKey(job.company.name, job.role)
     const existing = await Application.findOne({ student: me.student, $or: [{ job: job._id }, { key }] }).lean()
+    const choice = driveChoice(status)!
+    if ((status === 'Accepted' || status === 'Declined') && !OFFERED.includes(existing?.status ?? '')) throw new Invalid('You can only accept or decline after an offer.')
+    const newOffer = status === 'Offered' && !OFFERED.includes(existing?.status ?? '') // an offer already on record (incl. accepted/declined) is not reported again
+    if (newOffer && str(fd, 'confirmOffer', 5) !== 'yes') throw new Invalid('Please confirm that you received an offer.')
+    const remarks = newOffer ? ['Student confirmed: offer received', note].filter(Boolean).join(' — ') : note
+    let appId: Types.ObjectId
     if (!existing) {
-      await Application.create({ student: me.student, job: job._id, company: job.company.name, role: job.role, key, link: job.link, appliedOn: status === 'Not Applied' ? undefined : new Date(), source: 'MARQ', status, remarks, history: [entry(me, null, status, remarks)] })
-    } else if (existing.status !== status || remarks) {
-      await Application.updateOne({ _id: existing._id }, { $set: { status, ...(existing.job ? {} : { job: job._id }) }, $push: { history: entry(me, existing.status, status, remarks) } })
+      const created = await Application.create({ student: me.student, job: job._id, company: job.company.name, role: job.role, key, link: job.link, appliedOn: status === 'Not Applied' ? undefined : new Date(), source: 'MARQ', status, remarks, history: [entry(me, null, status, remarks)] })
+      appId = created._id
+    } else if (existing.status !== status || note) {
+      await Application.updateOne(
+        { _id: existing._id },
+        { $set: { status, ...(existing.job ? {} : { job: job._id }), ...(!existing.appliedOn && status !== 'Not Applied' ? { appliedOn: new Date() } : {}) }, $unset: { nudgedAt: 1 }, $push: { history: entry(me, existing.status, status, remarks) } },
+      )
+      appId = existing._id
     } else return { ok: 'No change.' }
     await audit(me, 'applications', 'drive.status', job._id, { status: existing?.status ?? null }, { status })
+    if (newOffer) {
+      await audit(me, 'applications', 'drive.offerReported', appId, { status: existing?.status ?? null }, { status, company: job.company.name })
+      const roles = await Role.find({ $or: [{ perms: '*' }, { perms: 'applications.edit' }] }).distinct('_id')
+      const staff = await User.find({ role: { $in: roles }, status: 'active' }).distinct('_id')
+      await notifyUsers(staff, { title: `Offer reported: ${me.name} — ${job.company.name}`, body: 'Please verify with the student.', link: `/applications/${appId}` })
+      revalidatePath('/applications')
+    } else if (status === 'Accepted') await audit(me, 'applications', 'drive.offerAccepted', appId, { status: existing?.status ?? null }, { status, company: job.company.name })
     revalidatePath('/me/jobs')
     revalidatePath('/me/applications')
-    return { ok: `Saved: ${DRIVE_OPTIONS.find(([, s]) => s === status)![0]}.` }
+    revalidatePath('/me')
+    const ok = newOffer ? '🎉 Congratulations! Your offer is recorded — the placement team will verify it with you.' : `Saved: ${choice.summary}.`
+    return { ok, data: { status, summary: choice.summary } }
   })
 }
