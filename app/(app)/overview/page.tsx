@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, CalendarClock, Download, FileText, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { can, requireUser, scopedStudentIds, studentScope, type Me } from '@/lib/auth'
 import { profiles } from '@/lib/intel'
 import { appMetrics } from '@/lib/app-metrics'
@@ -11,8 +11,9 @@ import { Bars } from '@/components/charts'
 import { AttendanceDays } from '@/components/attendance-days'
 import { OFFERED } from '@/lib/placement'
 import { MarqWordmark } from '@/components/logo'
+import { DriveAnswers } from '@/components/drive-answers'
+import { ACTIVE_DRIVES, answersFor, autoArchiveDrives, driveOptions, selectDrives } from '@/lib/drives'
 import { Modal, StatModal } from '@/components/form'
-import type { Types } from 'mongoose'
 
 export const metadata = { title: 'Overview' }
 const fmt0 = (v: number | null | undefined) => (v == null ? '—' : Math.round(v).toLocaleString('en-IN'))
@@ -29,6 +30,8 @@ export default async function Overview() {
   const ids = await scopedStudentIds(me)
   const sMatch = ids ? { student: { $in: ids } } : {}
   const batchScope = await visibleBatches(me)
+  if (can(me, 'applications.view')) await autoArchiveDrives()
+  const activeJobs = can(me, 'applications.view') ? await Job.find(ACTIVE_DRIVES).distinct('_id') : []
   const [students, prof, m, attDaily, catAvg, conducted, upcomingSessions, batches, recent, placed, answered] = await Promise.all([
     can(me, 'students.view') ? Student.find({ ...scope, status: { $ne: 'dropped' } }).select('name regNo status batch').lean() : [],
     can(me, 'performance.view') ? profiles(ids) : new Map(),
@@ -42,7 +45,7 @@ export default async function Overview() {
     Batch.find(batchScope ? { _id: { $in: batchScope } } : {}).select('name').lean(),
     can(me, 'audit.view') ? AuditLog.find().sort({ at: -1 }).limit(8).lean() : [],
     can(me, 'applications.view') ? Application.distinct('student', { ...sMatch, status: { $in: OFFERED } }) : [],
-    can(me, 'applications.view') ? Application.distinct('student', { ...sMatch, job: { $ne: null } }) : [],
+    can(me, 'applications.view') ? Application.distinct('student', { ...sMatch, job: { $in: activeJobs } }) : [], // answered at least one ACTIVE drive
   ])
 
   // students restricted to those whose profiles we hold (scope already applied)
@@ -84,9 +87,9 @@ export default async function Overview() {
             <StatModal label="Applications" value={m.total} hint={`${m.companies} companies · ${m.notApplied} “not applied” answers`} title={`Applications · ${m.total} across ${m.companies} companies`}>
               <ApplicationsByCompany match={sMatch} />
             </StatModal>
-            <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
+            <Stat label={`Answered drive status · ${activeJobs.length} active drive${activeJobs.length === 1 ? '' : 's'}`} value={`${answered.length}/${active}`} hint={
               <Modal label="View students →" title="Who has answered the drives" className="text-accent hover:underline" xl>
-                <DriveAnswerLists scope={scope} me={me} />
+                <DriveAnswersPopup scope={scope} me={me} />
               </Modal>
             } />
           </Grid>
@@ -203,56 +206,11 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
   )
 }
 
-/** Who has updated at least one drive, and who hasn't (active students only). */
-async function DriveAnswerLists({ scope, me }: { scope: Record<string, unknown>; me: Me }) {
-  const [jobs, all] = await Promise.all([
-    Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean(),
-    Student.find({ ...scope, status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean(),
-  ])
-  const total = jobs.length
-  // per student: how many of the drives they answered (any answer counts — including "didn't apply")
-  const per = new Map((await Application.aggregate<{ _id: Types.ObjectId; n: number }>([
-    { $match: { job: { $in: jobs.map(j => j._id) }, student: { $in: all.map(s => s._id) } } },
-    { $group: { _id: '$student', jobs: { $addToSet: '$job' } } }, { $project: { n: { $size: '$jobs' } } },
-  ])).map(r => [String(r._id), r.n]))
-  const rows = all.map(s => ({ s, n: Math.min(per.get(String(s._id)) ?? 0, total) }))
-  const full = rows.filter(r => total > 0 && r.n >= total)
-  const partial = rows.filter(r => r.n > 0 && r.n < total).sort((a, b) => b.n - a.n)
-  const none = rows.filter(r => r.n === 0)
-  // one boxed panel per group, one small card per student: name on top (wraps), ID underneath, n/total badge at the right
-  const panel = (title: string, xs: typeof rows, head: string, badge: string) => (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-subtle/40">
-      <h3 className={`flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 text-sm font-semibold ${head}`}><span>{title}</span><span className="rounded-full bg-black/10 px-2 py-0.5 text-xs tabular-nums dark:bg-white/10">{xs.length}</span></h3>
-      <ul className="max-h-[55vh] space-y-2 overflow-y-auto p-3">
-        {xs.map(({ s, n }) => (
-          <li key={String(s._id)} className="flex items-start justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 shadow-sm">
-            <div className="min-w-0">
-              <Link href={`/students/${s._id}`} className="block text-sm leading-snug font-medium break-words hover:underline">{s.name}</Link>
-              <div className="mt-0.5 font-mono text-xs text-muted">{s.regNo}</div>
-            </div>
-            <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${badge}`}>{n}/{total}</span>
-          </li>
-        ))}
-        {!xs.length && <li className="px-1 py-3 text-sm text-muted">None</li>}
-      </ul>
-    </section>
-  )
-  return (
-    <div className="text-left text-sm leading-normal font-normal whitespace-normal text-fg"> {/* the pop-up sits inside a one-line caption: undo its no-wrap / truncate */}
-      {can(me, 'reports.export') && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <a className="btn-outline" href="/api/reports/driveAnswers?format=xlsx"><Download className="size-4" />Excel</a>
-          <a className="btn-outline" href="/reports/driveAnswers?print=1" target="_blank" rel="noopener"><FileText className="size-4" />PDF</a>
-        </div>
-      )}
-      <p className="mb-4 text-sm text-muted">{total} drive{total === 1 ? '' : 's'} published. A student has “answered” a drive when they set their status for it — “I didn’t apply” counts as an answer.</p>
-      <div className="grid gap-4 md:grid-cols-3">
-        {panel('All drives answered', full, 'text-emerald-700 dark:text-emerald-300', 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')}
-        {panel('Partly answered', partial, 'text-amber-700 dark:text-amber-300', 'bg-amber-500/15 text-amber-700 dark:text-amber-300')}
-        {panel('Not answered yet', none, 'text-red-700 dark:text-red-300', 'bg-red-500/15 text-red-700 dark:text-red-300')}
-      </div>
-    </div>
-  )
+/** The pop-up: starts on the active drives; the picker inside switches to all drives or any chosen set. */
+async function DriveAnswersPopup({ scope, me }: { scope: Record<string, unknown>; me: Me }) {
+  const pick = await selectDrives('active')
+  const [{ total, rows }, options] = await Promise.all([answersFor(pick.jobs, scope), driveOptions()])
+  return <DriveAnswers initial={{ label: pick.label, total, rows }} options={options} canExport={can(me, 'reports.export')} />
 }
 
 const OFFER_TONE = { Offered: 'green', Accepted: 'green', Declined: 'zinc' } as const

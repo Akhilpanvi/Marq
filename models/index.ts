@@ -314,6 +314,9 @@ const jobSchema = new Schema(
     process: String,
     type: { type: String, enum: ['Full-time', 'Internship', 'Internship + Full-time', 'Contract'], default: 'Full-time' },
     status: { type: String, enum: ['draft', 'open', 'closed'], default: 'open', index: true },
+    // archived = kept aside: hidden from students and left out of counts and reminders, kept in reports (lib/drives.ts)
+    archivedAt: { type: Date, default: null, index: true },
+    archivedAuto: Boolean,
   },
   ts,
 )

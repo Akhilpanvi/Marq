@@ -9,7 +9,8 @@ import { Badge, Card, Empty, PageHeader, Table } from '@/components/ui'
 import { Filters, Pager, PAGE_SIZE, pageOf, Select, sp, escapeRe } from '@/components/list'
 import { ActionButton, ActionForm, Modal } from '@/components/form'
 import { JobFields } from '@/components/job-fields'
-import { deleteJob, saveJob } from '@/app/actions/placement'
+import { setJobArchived, deleteJob, saveJob } from '@/app/actions/placement'
+import { ARCHIVE_DAYS } from '@/lib/drives'
 
 export const metadata = { title: 'Job Opportunities' }
 
@@ -21,7 +22,9 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const filter: Record<string, unknown> = {}
   if (q) filter.role = new RegExp(escapeRe(q), 'i')
   if (OID.test(company)) filter.company = company
-  if (status) filter.status = status
+  if (status === 'archived') filter.archivedAt = { $ne: null }
+  else if (status === 'active') Object.assign(filter, { status: { $in: ['open', 'closed'] }, archivedAt: null })
+  else if (status) filter.status = status
   if (type) filter.type = type
   const [jobs, total, companies, editing] = await Promise.all([
     Job.find(filter).sort({ createdAt: -1 }).skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean(),
@@ -38,11 +41,12 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         {can(me, 'jobs.create') && <Modal label={<><Plus className="size-4" />Publish opportunity</>} title="New opportunity" wide>{companies.length ? <ActionForm action={saveJob} submit="Save"><JobFields companies={companies} /></ActionForm> : <p className="text-sm text-muted">Add the company first under Companies.</p>}</Modal>}
       </PageHeader>
       {editing && <Card title={`Edit ${editing.role}`} className="mb-6" action={<Link href="/jobs" className="btn-ghost">Close</Link>}><ActionForm action={saveJob} submit="Save" reset={false}><JobFields j={editing} companies={companies} /></ActionForm></Card>}
+      <p className="mb-3 text-sm text-muted">Drives archive themselves {ARCHIVE_DAYS / 7} weeks after their deadline (or after posting, if there is no deadline). Archived drives are hidden from students and left out of counts and reminders, but stay in reports.</p>
       <Card pad={false}>
         <Filters params={params} placeholder="Search roles">
           <Select name="company" value={company} options={companies} all="All companies" />
           <Select name="type" value={type} options={['Full-time', 'Internship', 'Internship + Full-time', 'Contract']} all="All types" />
-          <Select name="status" value={status} options={[['open', 'Open'], ['draft', 'Draft'], ['closed', 'Closed']]} all="All statuses" />
+          <Select name="status" value={status} options={[['active', 'Active (shown to students)'], ['archived', 'Archived'], ['open', 'Open'], ['draft', 'Draft'], ['closed', 'Closed']]} all="All statuses" />
         </Filters>
         <Table head={['Role', 'Company', 'Package', 'Type', 'Deadline', 'Applicants', 'Status', '']} empty={<Empty>No opportunities yet.</Empty>}>
           {jobs.map(j => (
@@ -53,9 +57,12 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
               <td className="td text-muted">{j.type}</td>
               <td className="td text-muted">{day(j.deadline)}</td>
               <td className="td tabular-nums"><Link href={`/applications?job=${j._id}`} className="hover:underline">{counts.get(String(j._id)) ?? 0}</Link></td>
-              <td className="td"><Badge tone={j.status === 'open' ? 'green' : j.status === 'draft' ? 'amber' : 'zinc'}>{j.status}</Badge></td>
+              <td className="td"><Badge tone={j.status === 'open' ? 'green' : j.status === 'draft' ? 'amber' : 'zinc'}>{j.status}</Badge>{j.archivedAt && <div className="mt-1"><Badge tone="zinc">Archived{j.archivedAuto ? ' (auto)' : ''}</Badge></div>}</td>
               <td className="td"><div className="flex justify-end gap-1">
                 {can(me, 'jobs.edit') && <Link href={`/jobs?edit=${j._id}`} className="btn-ghost px-2 py-1 text-xs">Edit</Link>}
+                {can(me, 'jobs.edit') && j.status !== 'draft' && (j.archivedAt
+                  ? <ActionButton action={setJobArchived} fields={{ id: String(j._id), archive: '0' }} className="btn-ghost px-2 py-1 text-xs" confirm="Make this drive active again? Students will see it and it counts again.">Unarchive</ActionButton>
+                  : <ActionButton action={setJobArchived} fields={{ id: String(j._id), archive: '1' }} className="btn-ghost px-2 py-1 text-xs" confirm="Archive this drive? It is hidden from students and left out of counts and reminders. Reports keep it.">Archive</ActionButton>)}
                 {can(me, 'jobs.delete') && <ActionButton action={deleteJob} fields={{ id: String(j._id) }} className="btn-ghost px-2 py-1 text-red-600" confirm="Delete this opportunity?"><Trash2 className="size-3.5" /></ActionButton>}
               </div></td>
             </tr>

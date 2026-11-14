@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ACTIVE_DRIVES } from '@/lib/drives'
 import { avatarSrc } from '@/lib/avatar'
 import { Briefcase, CalendarClock, ClipboardCheck, MessagesSquare } from 'lucide-react'
 import { requireStudent } from '@/lib/auth'
@@ -27,9 +28,11 @@ export default async function StudentDashboard() {
   ])
   const placed = placementStatus(j.apps)
   const answered = new Set(j.apps.map(a => String(a.job)))
-  const pendingDrives = (await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()).filter(x => !answered.has(String(x._id))).length
+  const active = await Job.find(ACTIVE_DRIVES).select('_id').lean() // archived drives are kept aside: not shown, not counted
+  const activeIds = new Set(active.map(x => String(x._id)))
+  const pendingDrives = active.filter(x => !answered.has(String(x._id))).length
 
-  const waiting = j.apps.filter(a => isWaiting(a.status) && daysSince(a.updatedAt) >= NUDGE_DAYS)
+  const waiting = j.apps.filter(a => isWaiting(a.status) && daysSince(a.updatedAt) >= NUDGE_DAYS && (!a.job || activeIds.has(String(a.job))))
   return (
     <>
       <PageHeader title={`Welcome, ${s.name.split(' ')[0]}`} description="Your Marquee journey at a glance." />

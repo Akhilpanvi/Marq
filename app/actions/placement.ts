@@ -1,7 +1,8 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import type { Types } from 'mongoose'
-import { assertStudentAccess, audit, can, currentUser, guard, type Me } from '@/lib/auth'
+import { assertStudentAccess, audit, can, currentUser, guard, studentScope, type Me } from '@/lib/auth'
+import { alertArchivedDriveUpdate, answersFor, selectDrives } from '@/lib/drives'
 import { attempt, date, Invalid, link, list, need, num, oid, oneOf, str, type State } from '@/lib/form'
 import { appKey, DRIVE_CHOICES, driveChoice, driveLocked, EDIT_MINUTES, LOCK_MESSAGE, OFFERED } from '@/lib/placement'
 import { getStatuses } from '@/lib/settings'
@@ -76,6 +77,28 @@ export async function deleteJob(_: State, fd: FormData): Promise<State> {
   })
 }
 
+/** Keep a finished drive aside (or bring it back). Archived drives leave student views, counts and reminders; reports keep them. */
+export async function setJobArchived(_: State, fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('jobs.edit')
+    const j = await Job.findById(oid(fd, 'id')).populate<{ company: { name: string } }>('company', 'name').lean()
+    if (!j) throw new Invalid('Opportunity not found.')
+    const archive = fd.get('archive') === '1'
+    await Job.updateOne({ _id: j._id }, archive ? { $set: { archivedAt: new Date(), archivedAuto: false } } : { $set: { archivedAt: null }, $unset: { archivedAuto: 1 } })
+    await audit(me, 'jobs', archive ? 'job.archive' : 'job.unarchive', j._id, undefined, { role: j.role, company: j.company?.name })
+    for (const p of ['/jobs', '/overview', '/placement', '/me/jobs']) revalidatePath(p)
+    return { ok: archive ? `${j.company?.name} · ${j.role} archived — hidden from students and left out of counts.` : `${j.company?.name} · ${j.role} is active again.` }
+  })
+}
+
+/** Overview pop-up: who answered the chosen drives ("active" · "all" · comma list of drive ids). */
+export async function loadDriveAnswers(sel: string) {
+  const me = await guard('applications.view')
+  const pick = await selectDrives(String(sel ?? '').slice(0, 2000))
+  const { total, rows } = await answersFor(pick.jobs, await studentScope(me))
+  return { label: pick.label, total, rows }
+}
+
 /* ───────────── Applications (students and placement staff) ───────────── */
 
 /** Resolves who the application is for: a student always acts on themselves; staff need permission and scope. */
@@ -123,6 +146,7 @@ export async function saveApplication(_: State, fd: FormData): Promise<State> {
       if (before.job) Object.assign(set, { company: before.company, role: before.role, key: before.key }) // linked to a published job: keep its identity
       await Application.updateOne({ _id: id }, { $set: set })
       await audit(me, 'applications', 'application.update', id, before, set)
+      if (me.student && before.job && (await Job.exists({ _id: before.job, archivedAt: { $ne: null } }))) await alertArchivedDriveUpdate(before, before.status, `${before.status} (details edited)`)
     } else {
       const status = oneOf(fd, 'status', statuses, 'Applied')
       const a = await Application.create({ ...set, student, status, history: [entry(me, null, status, set.remarks)] })
@@ -148,6 +172,7 @@ export async function setApplicationStatus(_: State, fd: FormData): Promise<Stat
     if (before.status === status && !remarks) throw new Invalid('Choose a different status or add a remark.')
     await Application.updateOne({ _id: before._id }, { $set: { status }, $push: { history: entry(me, before.status, status, remarks) } })
     await audit(me, 'applications', 'application.status', before._id, { status: before.status }, { status, remarks })
+    if (me.student && before.job && (await Job.exists({ _id: before.job, archivedAt: { $ne: null } }))) await alertArchivedDriveUpdate(before, before.status, status)
     if (!me.student) await notifyStudents([before.student], { title: `${before.company}: ${status}`, body: remarks, link: '/me/applications' })
     revalidatePath('/me/applications')
     revalidatePath('/applications')
@@ -164,6 +189,7 @@ export async function setDriveStatus(_: State, fd: FormData): Promise<State> {
     if (!me?.student) throw new Invalid('Only students report their own drive status.')
     const job = await Job.findById(oid(fd, 'job')).populate<{ company: { name: string } }>('company', 'name').lean()
     if (!job || job.status === 'draft') throw new Invalid('Opportunity not found.')
+    if (job.archivedAt) throw new Invalid('This drive is archived. To change it, contact the Director or the IRP admin.')
     const status = oneOf(fd, 'status', DRIVE_CHOICES.map(c => c.value))
     const note = str(fd, 'remarks', 500)
     const key = appKey(job.company.name, job.role)

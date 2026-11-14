@@ -42,6 +42,7 @@ _Last updated: 11 Nov 2026_
 | 23j | Overview ordered by programme priority: 1 Placement, 2 Coding scores, 3 Attendance, then overall performance | Done | e2e render |
 | 23k | Excused (E): Director-only, on a posted day, absent periods only, with reason + history; excluded from the percentage; E in uploads is read as absent | Done | e2e |
 | 23l | Super Admin “Student View (demo)”: browse the student portal as a demo student hidden from every list, register, report, leaderboard and count; reset + exit | Done | e2e |
+| 23q | Drive archive: manual + auto 4 weeks after deadline/posting; hidden from students and counts; pop-up picks Active / All / any drives (exports follow); student edits on archived drives alert Directors + IRP admins (in-app + email) | Done | e2e |
 | 23p | Drive status pop-up in plain language (choose → review → save), offer double-check + staff notified, weekly “any news?” reminder, accepted/declined after an offer | Done | e2e (43 checks), Opus review |
 | 23o | Dropped (D): Director marks from a date; attendance shows D from then (greyed), login off, left out of lists/counts, kept in reports; undo | Done | e2e |
 | 23n | Daily Register is per batch: choose the batch first; one locked register per batch per day; downloads per batch; seed puts the current cohort in batch "A" | Done | e2e |
@@ -69,7 +70,7 @@ _Last updated: 11 Nov 2026_
 ## Testing status
 
 - `npm test` — scoring unit checks: pass.
-- `npm run test:e2e` — 43 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
+- `npm run test:e2e` — 45 end-to-end checks across all 10 roles: pass (Next.js 16.4.6, production build).
 - `npx tsc --noEmit`, `next build`: clean. `npm audit --omit=dev`: 0 vulnerabilities.
 
 ## Architectural decisions

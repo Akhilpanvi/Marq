@@ -1,6 +1,7 @@
 import 'server-only'
 import { Types } from 'mongoose'
-import { can, scopedStudentIds, type Me } from './auth'
+import { can, scopedStudentIds, studentScope, type Me } from './auth'
+import { answerGroup, answersFor, selectDrives } from './drives'
 import { profiles } from './intel'
 import { attendancePct, DIMENSIONS, type Dim } from './scoring'
 import { placementStatus, OFFERED, REJECTED, DRIVE_OPTIONS } from './placement'
@@ -105,39 +106,30 @@ export const REPORTS: Record<string, Def> = {
     title: 'Drive status', description: 'Per company drive: how many students answered, and how many are at each stage (the Google-Form question).', perm: 'applications.view',
     build: async (me, p) => {
       const { ids } = await scopedStudents(me, p)
-      const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ createdAt: 1 }).lean()
+      const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ archivedAt: 1, createdAt: 1 }).lean()
       const apps = await Application.find({ job: { $in: jobs.map(j => j._id) }, student: { $in: ids } }).select('job status').lean()
       // The Google-Form stages, plus what students report after an offer, so the stage columns add up to "Answered".
       const stages = [...DRIVE_OPTIONS, ['Offer accepted', 'Accepted'], ['Offer declined', 'Declined']] as const
       return {
         title: 'Drive status',
-        columns: ['Company', 'Role', 'Registration', 'Answered', 'Not answered', ...stages.map(([l]) => l)],
+        columns: ['Company', 'Role', 'Registration', 'Archived', 'Answered', 'Not answered', ...stages.map(([l]) => l)],
         rows: jobs.map(j => {
           const a = apps.filter(x => String(x.job) === String(j._id))
-          return [j.company?.name ?? '', j.role, j.status === 'open' ? 'Open' : 'Closed', a.length, ids.length - a.length, ...stages.map(([, s]) => a.filter(x => x.status === s || (s === 'Applied - No Response' && x.status === 'Applied')).length)]
+          return [j.company?.name ?? '', j.role, j.status === 'open' ? 'Open' : 'Closed', j.archivedAt ? 'Yes' : 'No', a.length, ids.length - a.length, ...stages.map(([, s]) => a.filter(x => x.status === s || (s === 'Applied - No Response' && x.status === 'Applied')).length)]
         }),
       }
     },
   },
   driveAnswers: {
-    title: 'Answered drive status', description: 'Each active student in ID order: all drives answered, partly answered (n of total), or not answered yet.', perm: 'applications.view',
+    title: 'Answered drive status', description: 'Each active student in ID order: all, part or none of the chosen drives answered. Active drives by default; add ?drives=all or a list of drives.', perm: 'applications.view',
     build: async (me, p) => {
-      const { students, ids, bName } = await scopedStudents(me, p)
-      const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()
-      const per = new Map((await Application.aggregate<{ _id: Types.ObjectId; n: number }>([
-        { $match: { job: { $in: jobs.map(j => j._id) }, student: { $in: ids } } },
-        { $group: { _id: '$student', jobs: { $addToSet: '$job' } } }, { $project: { n: { $size: '$jobs' } } },
-      ])).map(x => [String(x._id), x.n]))
-      const total = jobs.length
-      const rows = students.filter(s => s.status === 'active').map(s => {
-        const n = Math.min(per.get(String(s._id)) ?? 0, total)
-        const group = total > 0 && n >= total ? 'All answered' : n > 0 ? 'Partly answered' : 'Not answered yet'
-        return { s, n, group, rank: group === 'All answered' ? 0 : group === 'Partly answered' ? 1 : 2 }
-      }).sort((a, b) => a.s.regNo.localeCompare(b.s.regNo)) // ID ascending; the Group column says which group each student is in
+      const pick = await selectDrives(p.get('drives'))
+      const { total, rows } = await answersFor(pick.jobs, await studentScope(me))
+      const batch = new Map((await Student.find({ _id: { $in: rows.map(r => r.id) } }).select('personalEmail batch').populate<{ batch: { name: string } | null }>('batch', 'name').lean()).map(s => [String(s._id), s]))
       return {
-        title: 'Answered drive status',
+        title: `Answered drive status — ${pick.label}`,
         columns: ['Group', 'Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Answered', 'Out of'],
-        rows: rows.map(r => [r.group, r.s.regNo, r.s.name, r.s.personalEmail ?? '', bName.get(String(r.s.batch)) ?? '', r.n, total]),
+        rows: rows.map(r => { const s = batch.get(r.id); return [answerGroup(r.n, total), r.regNo, r.name, s?.personalEmail ?? '', s?.batch?.name ?? '', r.n, total] }),
       }
     },
   },

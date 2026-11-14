@@ -438,7 +438,7 @@ try {
     assert.equal(app!.status, 'Technical Interview Scheduled')
     assert.deepEqual(hist(app as never).slice(-3), ['Applied - No Response', 'Written Test Completed', 'Technical Interview Scheduled'])
     const csv = await (await sa.request.get('/api/reports/drives?format=csv')).text()
-    assert.match(csv, /"Acme Corp","Software Engineer","Open","1","3"/)
+    assert.match(csv, /"Acme Corp","Software Engineer","Open","No","1","3"/)
   })
 
   await step('Not selected path, then back in the technical round', async () => {
@@ -549,6 +549,56 @@ try {
     await dialog(s1).getByTestId('drive-save').click()
     await dialog(s1).getByText(/Made a mistake\? You can change it for the next 10 minutes/).waitFor()
     assert.equal((await apps.findOne({ _id: app._id }))!.status, 'Written Test Completed')
+  })
+
+  await step('Archive drives: hidden from students, left out of counts; pick any drives in the pop-up; edits alert Director + IRP admin; auto-archive; unarchive', async () => {
+    const apps = mongoose.connection.collection('applications'), jobs = mongoose.connection.collection('jobs')
+    const app = (await apps.findOne({ company: 'Acme Corp' }))!
+    // the Placement (IRP) admin archives the Acme drive by hand
+    await pa.goto('/jobs')
+    pa.once('dialog', d => d.accept())
+    await pa.locator('tr', { hasText: 'Software Engineer' }).getByRole('button', { name: 'Archive' }).click()
+    await toast(pa, /archived — hidden from students/)
+    assert.ok((await jobs.findOne({ _id: app.job }))!.archivedAt)
+    // students no longer see it or get asked about it
+    await s1.goto('/me/jobs')
+    assert.equal(await s1.locator('.card', { hasText: 'Software Engineer' }).count(), 0)
+    // Overview: the answered count is over ACTIVE drives; the picker can still show the archived one
+    await sa.goto('/overview')
+    await sa.getByText(/Answered drive status · 0 active drives/).waitFor()
+    await sa.getByText('View students').first().click()
+    const d = dialog(sa)
+    await d.getByRole('button', { name: /Active drives \(0\)/ }).waitFor()
+    await d.getByRole('button', { name: 'Choose drives…' }).click()
+    await d.locator('label', { hasText: 'Acme Corp · Software Engineer' }).locator('input[type=checkbox]').check()
+    await d.getByRole('button', { name: /Show 1 drive/ }).click()
+    await d.getByText('1 selected drives').or(d.getByText('Acme Corp · Software Engineer', { exact: true })).first().waitFor()
+    await d.locator('section', { hasText: 'All drives answered' }).getByText('Asha Rao').waitFor()
+    const xl = await sa.request.get(`/api/reports/driveAnswers?format=csv&drives=${app.job}`)
+    assert.match(await xl.text(), /"All answered","2300030001","Asha Rao"/)
+    await d.getByLabel('Close').click()
+    // a student edit on the archived drive (from My Applications) alerts the Director and the IRP admin
+    await apps.updateOne({ _id: app._id }, { $set: { editUntil: new Date(Date.now() + 5 * 60_000) } }, { timestamps: false } as never)
+    await s1.goto(`/me/applications?open=${app._id}`)
+    await s1.getByLabel('New status').selectOption('Technical Interview Scheduled')
+    await s1.getByRole('button', { name: 'Update', exact: true }).click()
+    await toast(s1, /Status updated/)
+    await pa.goto('/notifications')
+    await pa.getByText(/Archived drive updated: Asha Rao .* — Acme Corp/).first().waitFor()
+    // finished drives archive themselves 4 weeks after the deadline (or after posting)
+    const old = await jobs.insertOne({ company: (await jobs.findOne({ _id: app.job }))!.company, role: 'Old Drive', status: 'open', type: 'Full-time', skills: [], deadline: new Date(Date.now() - 30 * 86_400_000), archivedAt: null, createdAt: new Date(Date.now() - 40 * 86_400_000), updatedAt: new Date() })
+    const r = await (await fetch(`${BASE}/api/cron/nudges`, { headers: { authorization: 'Bearer test-cron' } })).json()
+    assert.ok(r.archived >= 1, JSON.stringify(r))
+    const oldJob = (await jobs.findOne({ _id: old.insertedId }))!
+    assert.ok(oldJob.archivedAt && oldJob.archivedAuto)
+    await jobs.deleteOne({ _id: old.insertedId })
+    // unarchive: the drive is back for students
+    await pa.goto('/jobs')
+    pa.once('dialog', d2 => d2.accept())
+    await pa.locator('tr', { hasText: 'Software Engineer' }).getByRole('button', { name: 'Unarchive' }).click()
+    await toast(pa, /active again/)
+    await s1.goto('/me/jobs')
+    await s1.locator('.card', { hasText: 'Software Engineer' }).first().waitFor()
   })
 
   await step('Coding profiles: student links a handle, gets points, rank and appears on both leaderboards', async () => {
@@ -895,7 +945,7 @@ try {
       assert.match(t.split('\n')[0], /Placement Mail ID/, kind)
     }
     await sa.goto('/reports/performance')
-    await sa.getByText('Confidential').waitFor()
+    await sa.getByText(/^Generated /).first().waitFor()
   })
 
   await step('Audit log records imports, corrections, status changes, approvals and registrations', async () => {

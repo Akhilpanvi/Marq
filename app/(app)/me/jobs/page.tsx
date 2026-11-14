@@ -1,4 +1,5 @@
 import { ExternalLink } from 'lucide-react'
+import { ACTIVE_DRIVES } from '@/lib/drives'
 import { requireStudent } from '@/lib/auth'
 import { companyOptions } from '@/lib/options'
 import { day } from '@/lib/format'
@@ -14,7 +15,7 @@ export default async function MyJobs({ searchParams }: { searchParams: Promise<R
   const me = await requireStudent()
   const params = await searchParams
   const q = sp(params, 'q'), type = sp(params, 'type'), company = sp(params, 'company'), min = Number(sp(params, 'min')) || 0
-  const filter: Record<string, unknown> = { status: { $in: ['open', 'closed'] } }
+  const filter: Record<string, unknown> = { ...ACTIVE_DRIVES } // archived drives are kept aside and not shown to students
   if (q) filter.$or = [{ role: new RegExp(escapeRe(q), 'i') }, { skills: new RegExp(escapeRe(q), 'i') }, { location: new RegExp(escapeRe(q), 'i') }]
   if (type) filter.type = type
   if (/^[a-f0-9]{24}$/.test(company)) filter.company = company

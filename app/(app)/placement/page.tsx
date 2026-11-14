@@ -5,7 +5,7 @@ import { appMetrics } from '@/lib/app-metrics'
 import { OFFERED, REJECTED } from '@/lib/placement'
 import { pct } from '@/lib/format'
 import { Application, Job, Student } from '@/models'
-import { Card, Grid, PageHeader, Stat, Table, Empty } from '@/components/ui'
+import { Badge, Card, Grid, PageHeader, Stat, Table, Empty } from '@/components/ui'
 import { Bars } from '@/components/charts'
 import { Modal } from '@/components/form'
 import { AppMetricTiles } from '@/components/app-metrics'
@@ -82,7 +82,7 @@ export default async function PlacementPage() {
 /** Per drive: who applied, who answered "Not applied", and who hasn't responded — each with names. */
 async function DriveResponses({ match, studentFilter }: { match: Record<string, unknown>; studentFilter: Record<string, unknown> }) {
   const [jobs, students] = await Promise.all([
-    Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ createdAt: 1 }).lean(),
+    Job.find({ status: { $in: ['open', 'closed'] } }).populate<{ company: { name: string } }>('company', 'name').sort({ archivedAt: 1, createdAt: -1 }).lean(),
     Student.find({ ...studentFilter, status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean(),
   ])
   const apps = await Application.find({ ...match, job: { $in: jobs.map(j => j._id) } }).select('job student status').lean()
@@ -110,7 +110,7 @@ async function DriveResponses({ match, studentFilter }: { match: Record<string, 
       <Table head={['Drive', 'Applied', 'Not applied', 'No response', '']} empty={<Empty>No drives yet.</Empty>}>
         {rows.map(r => (
           <tr key={String(r.j._id)}>
-            <td className="td"><div className="font-medium">{r.j.company?.name}</div><div className="text-xs text-muted">{r.j.role}</div></td>
+            <td className="td"><div className="font-medium">{r.j.company?.name}{r.j.archivedAt && <span className="ml-2"><Badge tone="zinc">Archived</Badge></span>}</div><div className="text-xs text-muted">{r.j.role}</div></td>
             <td className="td tabular-nums text-emerald-600">{r.applied.length}</td>
             <td className="td tabular-nums">{r.notApplied.length}</td>
             <td className="td tabular-nums text-amber-600">{r.noResponse.length}</td>
