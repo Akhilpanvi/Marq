@@ -119,6 +119,28 @@ export const REPORTS: Record<string, Def> = {
       }
     },
   },
+  driveAnswers: {
+    title: 'Answered drive status', description: 'Each active student: all drives answered, partly answered (n of total), or not answered yet.', perm: 'applications.view',
+    build: async (me, p) => {
+      const { students, ids, bName } = await scopedStudents(me, p)
+      const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()
+      const per = new Map((await Application.aggregate<{ _id: Types.ObjectId; n: number }>([
+        { $match: { job: { $in: jobs.map(j => j._id) }, student: { $in: ids } } },
+        { $group: { _id: '$student', jobs: { $addToSet: '$job' } } }, { $project: { n: { $size: '$jobs' } } },
+      ])).map(x => [String(x._id), x.n]))
+      const total = jobs.length
+      const rows = students.filter(s => s.status === 'active').map(s => {
+        const n = Math.min(per.get(String(s._id)) ?? 0, total)
+        const group = total > 0 && n >= total ? 'All answered' : n > 0 ? 'Partly answered' : 'Not answered yet'
+        return { s, n, group, rank: group === 'All answered' ? 0 : group === 'Partly answered' ? 1 : 2 }
+      }).sort((a, b) => a.rank - b.rank || b.n - a.n || a.s.regNo.localeCompare(b.s.regNo))
+      return {
+        title: 'Answered drive status',
+        columns: ['Group', 'Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Answered', 'Out of'],
+        rows: rows.map(r => [r.group, r.s.regNo, r.s.name, r.s.personalEmail ?? '', bName.get(String(r.s.batch)) ?? '', r.n, total]),
+      }
+    },
+  },
   evaluations: {
     title: 'Mentor evaluations', description: 'Ratings, strengths, weaknesses and recommendations.', perm: 'mentorship.view',
     build: async (me, p) => {

@@ -562,7 +562,13 @@ try {
     await toast(s1, 'Coding profiles saved and synced')
     await s1.reload()
     await s1.getByText('Current rating').first().waitFor()
-    await s1.getByText('Public repos').waitFor()
+    // GitHub's unauthenticated quota (60/h) can run out after many runs — that is the outside world, not MARQ: warn instead of failing
+    const gh = await s1.getByText('Public repos').waitFor({ timeout: 15_000 }).then(() => true, () => false)
+    if (!gh) {
+      const left = (await (await fetch('https://api.github.com/rate_limit')).json().catch(() => null))?.resources?.core?.remaining
+      if (left !== 0) throw new Error('GitHub stats did not load although the GitHub API has quota left')
+      console.log('\n  (warning: GitHub API quota exhausted — skipped the GitHub stats check) ')
+    }
     assert.doesNotMatch(await s1.locator('main').innerText(), /Coding points\s*0\b/)
     await s1.goto('/me/leaderboard')
     await s1.getByText('(you)').first().waitFor()
@@ -871,6 +877,19 @@ try {
     assert.match(r.headers()['content-type'], /spreadsheetml/)
     const c = await sa.request.get('/api/reports/attendance?format=csv')
     assert.match(await c.text(), /"Asha Rao","asha.personal@example.com"/) // Placement Mail ID in every student download
+    // Answered drive status: Excel + printable PDF view, grouped all / partly / not yet
+    const da = await sa.request.get('/api/reports/driveAnswers?format=csv')
+    assert.equal(da.status(), 200)
+    const dat = await da.text()
+    assert.match(dat.split('\n')[0], /Group.*Registration No.*Placement Mail ID.*Answered.*Out of/)
+    assert.match(dat, /"(All answered|Partly answered|Not answered yet)"/)
+    assert.equal((await sa.request.get('/api/reports/driveAnswers?format=xlsx')).status(), 200)
+    await sa.goto('/reports/driveAnswers')
+    await sa.getByRole('heading', { name: 'Answered drive status' }).first().waitFor()
+    // the PDF view carries the MARQ and KL logos in a header that repeats on every printed page
+    const hdr = sa.getByTestId('report-header')
+    assert.ok((await hdr.locator('svg, img').count()) >= 2, 'MARQ and KL logos in the report header')
+    assert.equal(await hdr.evaluate(e => getComputedStyle(e).display), 'table-header-group')
     for (const kind of ['students', 'performance', 'coding', 'placement', 'applications', 'assessments']) {
       const t = await (await sa.request.get(`/api/reports/${kind}?format=csv`)).text()
       assert.match(t.split('\n')[0], /Placement Mail ID/, kind)

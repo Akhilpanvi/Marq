@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { AlertTriangle, CalendarClock, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
-import { can, requireUser, scopedStudentIds, studentScope } from '@/lib/auth'
+import { AlertTriangle, CalendarClock, Download, FileText, ClipboardCheck, GraduationCap, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { can, requireUser, scopedStudentIds, studentScope, type Me } from '@/lib/auth'
 import { profiles } from '@/lib/intel'
 import { appMetrics } from '@/lib/app-metrics'
 import { visibleBatches } from '@/lib/scope'
@@ -86,7 +86,7 @@ export default async function Overview() {
             </StatModal>
             <Stat label="Answered drive status" value={`${answered.length}/${active}`} hint={
               <Modal label="View students →" title="Who has answered the drives" className="text-accent hover:underline" xl>
-                <DriveAnswerLists scope={scope} />
+                <DriveAnswerLists scope={scope} me={me} />
               </Modal>
             } />
           </Grid>
@@ -204,7 +204,7 @@ async function AssistantPanel({ scope }: { scope: Record<string, unknown> }) {
 }
 
 /** Who has updated at least one drive, and who hasn't (active students only). */
-async function DriveAnswerLists({ scope }: { scope: Record<string, unknown> }) {
+async function DriveAnswerLists({ scope, me }: { scope: Record<string, unknown>; me: Me }) {
   const [jobs, all] = await Promise.all([
     Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean(),
     Student.find({ ...scope, status: 'active' }).select('name regNo').sort({ regNo: 1 }).lean(),
@@ -232,6 +232,12 @@ async function DriveAnswerLists({ scope }: { scope: Record<string, unknown> }) {
   )
   return (
     <>
+      {can(me, 'reports.export') && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <a className="btn-outline" href="/api/reports/driveAnswers?format=xlsx"><Download className="size-4" />Excel</a>
+          <a className="btn-outline" href="/reports/driveAnswers?print=1" target="_blank" rel="noopener"><FileText className="size-4" />PDF</a>
+        </div>
+      )}
       <p className="mb-4 text-sm text-muted">{total} drive{total === 1 ? '' : 's'} published. A student has “answered” a drive when they set their status for it — “I didn’t apply” counts as an answer.</p>
       <div className="grid gap-6 md:grid-cols-3">
         <div><h3 className="mb-2 font-semibold text-emerald-600">All drives answered · {full.length}</h3>{list(full, 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')}</div>
