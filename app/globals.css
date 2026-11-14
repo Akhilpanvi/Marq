@@ -100,6 +100,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45); }
   .card { box-shadow: none; break-inside: avoid; background: #fff; }
   .print-flow { break-inside: auto !important; border: 0 !important; padding: 0 !important; background: #fff !important; }
   .print-flow table { font-size: 10px; }
+  .report-page { break-inside: avoid; }
   .print-flow td, .print-flow th { padding: 3px 6px; }
   tr { break-inside: avoid; }
   thead { display: table-header-group; }

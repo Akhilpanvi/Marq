@@ -120,7 +120,7 @@ export const REPORTS: Record<string, Def> = {
     },
   },
   driveAnswers: {
-    title: 'Answered drive status', description: 'Each active student: all drives answered, partly answered (n of total), or not answered yet.', perm: 'applications.view',
+    title: 'Answered drive status', description: 'Each active student in ID order: all drives answered, partly answered (n of total), or not answered yet.', perm: 'applications.view',
     build: async (me, p) => {
       const { students, ids, bName } = await scopedStudents(me, p)
       const jobs = await Job.find({ status: { $in: ['open', 'closed'] } }).select('_id').lean()
@@ -133,7 +133,7 @@ export const REPORTS: Record<string, Def> = {
         const n = Math.min(per.get(String(s._id)) ?? 0, total)
         const group = total > 0 && n >= total ? 'All answered' : n > 0 ? 'Partly answered' : 'Not answered yet'
         return { s, n, group, rank: group === 'All answered' ? 0 : group === 'Partly answered' ? 1 : 2 }
-      }).sort((a, b) => a.rank - b.rank || b.n - a.n || a.s.regNo.localeCompare(b.s.regNo))
+      }).sort((a, b) => a.s.regNo.localeCompare(b.s.regNo)) // ID ascending; the Group column says which group each student is in
       return {
         title: 'Answered drive status',
         columns: ['Group', 'Registration No', 'Name', 'Placement Mail ID', 'Batch', 'Answered', 'Out of'],
