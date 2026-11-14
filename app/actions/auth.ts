@@ -9,7 +9,7 @@ import { hashPassword, passwordIssue, verifyPassword } from '@/lib/password'
 import { str, type State } from '@/lib/form'
 import { issueLink, sha256 } from '@/lib/tokens'
 import { mailEnabled } from '@/lib/mail'
-import { User } from '@/models'
+import { User, Student } from '@/models'
 
 const LOCK_AFTER = 5
 const LOCK_MS = 15 * 60_000
@@ -17,8 +17,14 @@ const LOGIN_LIMIT = Number(process.env.LOGIN_RATE_LIMIT) || 30 // sign-in attemp
 const USERNAME = /^[a-z0-9][a-z0-9._-]{2,29}$/
 
 /** Sign-in ID: email, employee/student ID, or a staff username. */
-const findLogin = (id: string) =>
-  User.findOne({ $or: [{ email: id }, { empId: id.toUpperCase() }, ...(USERNAME.test(id) ? [{ username: id }] : [])] }).select('+passwordHash status sessionVersion failedLogins lockedUntil name role')
+const LOGIN_FIELDS = '+passwordHash status sessionVersion failedLogins lockedUntil name role'
+/** Email, employee ID or username — and, for students, their placement mail ID too (registration links go there). */
+async function findLogin(id: string) {
+  const u = await User.findOne({ $or: [{ email: id }, { empId: id.toUpperCase() }, ...(USERNAME.test(id) ? [{ username: id }] : [])] }).select(LOGIN_FIELDS)
+  if (u || !id.includes('@')) return u
+  const s = await Student.findOne({ personalEmail: id }).select('_id').lean()
+  return s ? User.findOne({ student: s._id }).select(LOGIN_FIELDS) : null
+}
 
 async function failed(user: { _id: Types.ObjectId; failedLogins: number }) {
   await User.updateOne({ _id: user._id }, user.failedLogins + 1 >= LOCK_AFTER ? { $set: { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCK_MS) } } : { $inc: { failedLogins: 1 } })
@@ -96,8 +102,14 @@ export async function requestReset(_: State, fd: FormData): Promise<State> {
   if (!id) return { error: 'Enter your email.' }
   await db()
   if (!(await rateLimit(`reset:${(await clientIp()) ?? 'unknown'}`, 5, 900))) return { error: 'Too many requests. Try again later.' }
-  const user = await User.findOne({ email: id, status: 'active' }).select('name email').lean()
-  if (user) after(() => issueLink(user, 'reset'))
+  let user = await User.findOne({ email: id, status: 'active' }).select('name email').lean()
+  let to: string | undefined
+  if (!user) { // a student typing their placement mail ID gets the reset link there
+    const s = await Student.findOne({ personalEmail: id }).select('_id').lean()
+    user = s ? await User.findOne({ student: s._id, status: 'active' }).select('name email').lean() : null
+    if (user) to = id
+  }
+  if (user) { const u = user; after(() => issueLink(u, 'reset', to)) }
   return { ok: 'If an account matches, a reset link has been emailed. It expires in 30 minutes.' }
 }
 

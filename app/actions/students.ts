@@ -1,6 +1,8 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { assertStudentAccess, audit, guard } from '@/lib/auth'
+import { assertStudentAccess, audit, guard, studentScope } from '@/lib/auth'
+import { mailEnabled } from '@/lib/mail'
+import type { Types } from 'mongoose'
 import { attempt, EMAIL, Invalid, need, oid, oids, oneOf, photoLink, REGNO, str, type State } from '@/lib/form'
 import { normalise, readRawRows } from '@/lib/sheet'
 import { issueLink } from '@/lib/tokens'
@@ -318,5 +320,42 @@ export async function setupBatchA(_: State, _fd: FormData): Promise<State> {
     revalidatePath('/students')
     revalidatePath('/attendance/register')
     return { ok: r.modifiedCount ? `Batch A is ready — ${r.modifiedCount} student${r.modifiedCount === 1 ? '' : 's'} added to it.` : 'Batch A is ready. Every student already has a batch.' }
+  })
+}
+
+/* ───────────── Registration links to placement mail IDs ───────────── */
+
+/** Email the registration (activation) link to the PLACEMENT MAIL ID of every active student who hasn't registered yet:
+ *  invited students get a fresh link (the old one stops working), students without an account get one created first.
+ *  Registered and deactivated students are never touched. The account itself keeps the university email. */
+export async function sendPlacementInvites(_: State, _fd: FormData): Promise<State> {
+  return attempt(async () => {
+    const me = await guard('users.create')
+    if (!mailEnabled()) throw new Invalid('Email is not set up on this server, so no links can be sent.')
+    const role = await Role.findOne({ key: 'student' }).select('_id').lean()
+    if (!role) throw new Invalid('The Student role is missing.')
+    const students = await Student.find({ ...(await studentScope(me)), status: 'active' }).select('name email regNo personalEmail').sort({ regNo: 1 }).lean()
+    const users = new Map((await User.find({ student: { $in: students.map(s => s._id) } }).select('name email status student').lean()).map(u => [String(u.student), u]))
+    let sent = 0, created = 0
+    const noMail: string[] = [], failed: string[] = []
+    for (const s of students) {
+      let u: { _id: Types.ObjectId; name: string; email: string; status?: string | null } | undefined = users.get(String(s._id))
+      if (u && u.status !== 'invited') continue // already registered, or deactivated
+      if (!s.personalEmail || !EMAIL.test(s.personalEmail)) { noMail.push(s.regNo); continue }
+      if (!u) {
+        if (await User.exists({ email: s.email })) { failed.push(s.regNo); continue }
+        u = await User.create({ name: s.name, email: s.email, type: 'student', role: role._id, student: s._id, status: 'invited', createdBy: me._id })
+        created++
+      }
+      const notSent = await issueLink(u, 'activate', s.personalEmail)
+      if (notSent) failed.push(s.regNo)
+      else sent++
+      await new Promise(r => setTimeout(r, 450)) // the email service accepts about 2 messages a second
+    }
+    await audit(me, 'users', 'account.placementInvites', `${sent} students`, undefined, { sent, created, noPlacementMail: noMail, failed })
+    revalidatePath('/students')
+    revalidatePath('/users')
+    const extra = [noMail.length ? `${noMail.length} have no placement mail ID (${noMail.slice(0, 5).join(', ')}${noMail.length > 5 ? '…' : ''})` : '', failed.length ? `${failed.length} could not be sent (${failed.slice(0, 5).join(', ')}${failed.length > 5 ? '…' : ''})` : ''].filter(Boolean).join('; ')
+    return { ok: `Sent ${sent} registration link${sent === 1 ? '' : 's'} to placement mail IDs${created ? ` (${created} new account${created === 1 ? '' : 's'} created)` : ''}.${extra ? ` ${extra}.` : ''}` }
   })
 }

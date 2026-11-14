@@ -1081,6 +1081,19 @@ try {
     await sa.getByRole('link', { name: 'Student View (demo)' }).first().waitFor()
   })
 
+  await step('Students can sign in with their placement mail ID (registration links go there)', async () => {
+    const dev = await login('dev.placement@example.com')
+    await dev.waitForURL(u => !u.pathname.startsWith('/login'))
+    assert.doesNotMatch(dev.url(), /\/login/)
+    await dev.context().close()
+    // a wrong password with a placement mail ID is still refused
+    const ctx = await browser.newContext({ baseURL: BASE }); const p = await ctx.newPage()
+    await p.goto('/login'); await p.fill('input[name=id]', 'dev.placement@example.com'); await p.fill('input[name=password]', 'not-the-password-1')
+    await p.click('button:has-text("Sign in")')
+    await p.getByText(/Incorrect|invalid|wrong/i).first().waitFor()
+    await ctx.close()
+  })
+
   await step('Every navigation page renders without server errors for Super Admin', async () => {
     for (const path of ['/attendance/register', '/reports/coding', '/overview', '/students', '/users', '/roles', '/training', '/attendance', '/assessments', '/performance', '/mentors', '/companies', '/jobs', '/applications', '/placement', '/reports', '/announcements', '/inbox', '/audit', '/settings', '/preview', '/notifications', '/account', `/students/${ids['2300030001']}`]) {
       const r = await sa.goto(path)
